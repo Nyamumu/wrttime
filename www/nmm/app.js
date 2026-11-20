@@ -302,6 +302,7 @@ const MENU_ALL = [
   ] },
   { group: '특수 기능', icon: 'link', items: [
     { path: '/ddns', label: 'DDNS 설정' },
+    { path: '/multicast', label: 'IPTV / 멀티캐스트 설정' },
     { path: '/software', label: '소프트웨어 관리' },
   ] },
   // LuCI에 설치된 서비스 (addons.js). 로그인 후 채우고, 하나도 없으면 메뉴를 숨긴다.

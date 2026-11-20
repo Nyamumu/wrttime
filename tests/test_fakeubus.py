@@ -160,6 +160,23 @@ class SessionAndAcl(Base):
         self.assertEqual(apk("fix"), [6])
         self.assertEqual(apk("update", "--force"), [6])
 
+    def test_igmpproxy_acl(self):
+        """IPTV / 멀티캐스트: 설치 후 igmpproxy 설정과 서비스 제어가 배포용 ACL로 된다."""
+        sid = self.login()
+        rc = lambda: [e["name"] for e in self.call(sid, "file", "list", {"path": "/etc/rc.d"})[1]["entries"]]
+        init = lambda a: self.call(sid, "file", "exec", {"command": "/etc/init.d/igmpproxy", "params": [a]})
+        self.assertNotIn("igmpproxy", self.call(sid, "uci", "configs")[1]["configs"])
+        self.assertEqual(self.call(sid, "file", "exec", {"command": "/usr/bin/apk", "params": ["add", "igmpproxy"]})[1]["code"], 0)
+        self.assertEqual(self.call(sid, "uci", "get", {"config": "igmpproxy"})[0], 0)
+        self.assertIn("S99igmpproxy", rc())
+        for a in ("stop", "disable"):
+            self.assertEqual(init(a)[1]["code"], 0)
+        self.assertNotIn("S99igmpproxy", rc())
+        self.assertEqual(init("enable")[1]["code"], 0)
+        self.assertEqual(init("restart")[1]["code"], 0)
+        self.assertIn("S99igmpproxy", rc())
+        self.assertEqual(init("reload"), [6])  # 정해진 동작 말고는 거부
+
     def test_led_and_packagelist_acl(self):
         """LED 설정과 업그레이드 확인이 쓰는 호출이 배포용 ACL로 되는지 (LED 트리거는 링크를 푼 실제 경로도 검사)."""
         sid = self.login()

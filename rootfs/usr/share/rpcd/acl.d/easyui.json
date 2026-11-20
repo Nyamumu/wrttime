@@ -14,7 +14,7 @@
 				"log": [ "read" ],
 				"iwinfo": [ "devices", "phyname", "info", "txpowerlist", "countrylist", "assoclist" ]
 			},
-			"uci": [ "network", "dhcp", "wireless", "firewall", "system", "ddns", "sqm", "dropbear", "banip", "uhttpd", "attendedsysupgrade" ],
+			"uci": [ "network", "dhcp", "wireless", "firewall", "system", "ddns", "sqm", "igmpproxy", "dropbear", "banip", "uhttpd", "attendedsysupgrade" ],
 			"file": {
 				"/etc/apk/keys": [ "list" ],
 				"/etc/apk/keys/*": [ "read" ],
@@ -24,6 +24,7 @@
 				"/etc/dropbear/authorized_keys": [ "read" ],
 				"/tmp/dhcp.leases": [ "read" ],
 				"/etc/board.json": [ "read" ],
+				"/etc/rc.d": [ "list" ],
 				"/usr/share/luci/menu.d": [ "list" ],
 				"/usr/share/luci/menu.d/*": [ "read" ],
 				"/lib/apk/db/installed": [ "read" ],
@@ -51,12 +52,16 @@
 				"hostapd.*": [ "del_client" ],
 				"file": [ "exec", "write", "remove" ]
 			},
-			"uci": [ "network", "dhcp", "wireless", "firewall", "system", "ddns", "sqm", "dropbear", "banip", "uhttpd" ],
+			"uci": [ "network", "dhcp", "wireless", "firewall", "system", "ddns", "sqm", "igmpproxy", "dropbear", "banip", "uhttpd" ],
 			"file": {
 				"/etc/apk/keys/*": [ "write" ],
 				"/etc/init.d/banip enable": [ "exec" ],
 				"/etc/init.d/banip restart": [ "exec" ],
 				"/etc/init.d/banip stop": [ "exec" ],
+				"/etc/init.d/igmpproxy enable": [ "exec" ],
+				"/etc/init.d/igmpproxy disable": [ "exec" ],
+				"/etc/init.d/igmpproxy restart": [ "exec" ],
+				"/etc/init.d/igmpproxy stop": [ "exec" ],
 				"/etc/dropbear/authorized_keys": [ "write" ],
 				"/tmp/firmware.bin": [ "write" ],
 				"/tmp/backup.tar.gz": [ "write" ],

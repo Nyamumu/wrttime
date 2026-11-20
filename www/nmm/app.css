@@ -288,6 +288,8 @@ td.actions-cell .btn + .btn { margin-left: 4px; }
 .check { display: flex; align-items: center; gap: 8px; margin: 4px 0 12px; cursor: pointer; }
 .check input { accent-color: var(--accent-strong); width: 16px; height: 16px; }
 .check[hidden] { display: none; }
+.sub-check { margin-left: 24px; }
+.sub-check[hidden] { display: none; }
 .days { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
 .days label { display: flex; align-items: center; gap: 4px; padding: 3px 8px; border: 1px solid var(--input-line); border-radius: 999px; font-size: 13px; cursor: pointer; }
 .actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px; margin-top: 8px; }

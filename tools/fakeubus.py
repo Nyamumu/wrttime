@@ -644,6 +644,17 @@ class FakeUbus:
             elif params == ["stop"]:
                 self.banip_status = {"status": "stopped", "element_count": "0", "active_feeds": [], "last_run": "-"}
             return {"code": 0, "stdout": ""}
+        if cmd == "/etc/init.d/igmpproxy" and "igmpproxy" in self.committed:
+            enabled = getattr(self, "rc_enabled", set())
+            if params == ["enable"]:
+                self.rc_enabled = enabled | {"igmpproxy"}
+            elif params == ["disable"]:
+                self.rc_enabled = enabled - {"igmpproxy"}
+            elif params in (["restart"], ["stop"]):
+                self.log(f"[fakeubus] igmpproxy {params[0]}")
+            else:
+                return {"code": 1, "stderr": "unknown action\n"}
+            return {"code": 0, "stdout": ""}
         if cmd == "/usr/libexec/nmmwrt-update":
             # 가짜 업데이트: 새 버전이 하나 있고, 설치하면 최신이 된다 (데모는 nmm_latest와 nmm_version을 같게 둬서 최신으로 보인다)
             latest = getattr(self, "nmm_latest", "1.0.15")
@@ -681,9 +692,16 @@ class FakeUbus:
         "sqm-scripts": ("1.7.2-r1", "Smart Queue Management scripts"),
         "luci-app-sqm": ("26.320.60423~5331286", "Control the simple_qos SQM script"),
         "banip": ("1.9.1-r5", "banIP blocks IPs via named nftables Sets."),
+        "igmpproxy": ("0.4-r2", "IGMP Proxy daemon"),
     }
     # 패키지를 설치하면 생기는 설정 파일 (--no-packages로 켠 공유기에서 설치 흐름을 확인한다)
-    APK_CONFIGS = {"ddns-scripts": "ddns", "sqm-scripts": "sqm", "banip": "banip"}
+    APK_CONFIGS = {"ddns-scripts": "ddns", "sqm-scripts": "sqm", "banip": "banip", "igmpproxy": "igmpproxy"}
+    # 기본 설정에 넣지 않고 설치할 때만 생기는 설정 (igmpproxy 패키지에 들어 있는 /etc/config/igmpproxy)
+    APK_ONLY_UCI = {"igmpproxy": [
+        S("igmpproxy", "cfg01a1b2", quickleave="1"),
+        S("phyint", "cfg02a1b2", network="wan", zone="wan", direction="upstream", altnet=["192.168.1.0/24"]),
+        S("phyint", "cfg03a1b2", network="lan", zone="lan", direction="downstream"),
+    ]}
     BANIP_COUNTRIES = "".join(f"{c}\t{r}\t{n}\n" for c, r, n in [
         ("cn", "APNIC", "China"), ("kr", "APNIC", "Korea (the Republic of)"), ("jp", "APNIC", "Japan"), ("ru", "RIPE", "Russian Federation"),
         ("us", "ARIN", "United States of America"), ("de", "RIPE", "Germany"), ("br", "LACNIC", "Brazil"), ("ap", "AFRINIC", "ARIPO")])
@@ -691,6 +709,11 @@ class FakeUbus:
     def _apk_add_config(self, pkg):
         config = self.APK_CONFIGS.get(pkg)
         if not config or config in self.committed:
+            return
+        if config in self.APK_ONLY_UCI:
+            self.committed[config] = copy.deepcopy(self.APK_ONLY_UCI[config])
+            self.running[config] = copy.deepcopy(self.APK_ONLY_UCI[config])
+            self.rc_enabled = getattr(self, "rc_enabled", set()) | {config}  # 실제 apk도 설치하면서 서비스를 켠다
             return
         packages, self.packages = self.packages, True
         factory = self._factory_uci()
@@ -1336,6 +1359,11 @@ class FakeUbus:
         if path.rstrip("/") == self.APK_KEYS:
             names = sorted(p.rsplit("/", 1)[1] for p in self.files if p.startswith(self.APK_KEYS + "/"))
             return {"entries": [{"name": n, "type": "file"} for n in names]}
+        if path.rstrip("/") == "/etc/rc.d":
+            starts = {"igmpproxy": "S99igmpproxy"}
+            names = ["S10boot", "S19firewall", "S20network", "S50uhttpd"]
+            names += [starts[n] for n in sorted(getattr(self, "rc_enabled", set())) if n in starts]
+            return {"entries": [{"name": n, "type": "symlink"} for n in sorted(names)]}
         if path.rstrip("/") == self.LUCI_MENU_DIR:
             if not self.packages:
                 raise Status(UBUS_NOT_FOUND)
