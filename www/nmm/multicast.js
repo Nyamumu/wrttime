@@ -25,7 +25,7 @@ async function igmpproxyEnabled() {
 }
 
 // 인터페이스가 들어 있는 방화벽 영역 이름
-function zoneOf(fw, net) {
+function mcZoneOf(fw, net) {
   const z = (fw || []).find((s) => s['.type'] === 'zone' && asList(s.network).includes(net));
   return z ? z.name : '';
 }
@@ -71,7 +71,7 @@ function multicastPage(root) {
       && !/^dhcpv6$|^6in4$|^6to4$|^6rd$/.test(s.proto || ''));
     const names = ifaces.map((s) => s['.name']);
     const label = (n) => {
-      const z = zoneOf(fw, n);
+      const z = mcZoneOf(fw, n);
       return n === 'wan' ? '인터넷 (wan)' : n === 'lan' ? '내부 네트워크 (lan)' : z ? `${n} (${z} 영역)` : n;
     };
 
@@ -115,9 +115,9 @@ function multicastPage(root) {
           ? { op: 'set', config: 'igmpproxy', section: global['.name'], values: globalValues }
           : { op: 'add', config: 'igmpproxy', type: 'igmpproxy', values: globalValues });
         ops.push({ op: 'add', config: 'igmpproxy', type: 'phyint', values: {
-          network: up.value, zone: zoneOf(fw, up.value), direction: 'upstream', altnet: alts } });
+          network: up.value, zone: mcZoneOf(fw, up.value), direction: 'upstream', altnet: alts } });
         for (const n of downs) {
-          ops.push({ op: 'add', config: 'igmpproxy', type: 'phyint', values: { network: n, zone: zoneOf(fw, n), direction: 'downstream' } });
+          ops.push({ op: 'add', config: 'igmpproxy', type: 'phyint', values: { network: n, zone: mcZoneOf(fw, n), direction: 'downstream' } });
         }
         const r = await runApply(ops);
         if (r !== 'applied' && r !== 'unchanged') { applyBtn.disabled = false; if (alive && r === 'rolledback') load(); return; }
