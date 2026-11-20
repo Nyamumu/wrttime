@@ -1,5 +1,5 @@
 #!/bin/sh
-# NMMWrt만 업데이트한다 (펌웨어와 무관). GitHub Release의 latest.json + nmmwrt.tar.gz를 쓴다.
+# wrtTIME만 업데이트한다 (펌웨어와 무관). GitHub Release의 latest.json + nmmwrt.tar.gz를 쓴다.
 #   nmmwrt-update check    -> {"current":"..","latest":"..","sha256":"..","update":true|false} 또는 {"error":".."}
 #   nmmwrt-update install  -> 내려받아 sha256 검사 후 설치. 결과는 같은 형식 + "installed"
 # __REPO__는 배포할 때 release.conf의 저장소(owner/name)로 바뀐다.

@@ -1,4 +1,4 @@
-// NMMWrt 업데이트 (펌웨어 업그레이드 화면의 카드): 펌웨어는 그대로 두고 NMMWrt 화면만 GitHub Release의 새 버전으로 바꾼다.
+// wrtTIME 업데이트 (펌웨어 업그레이드 화면의 카드): 펌웨어는 그대로 두고 wrtTIME 화면만 GitHub Release의 새 버전으로 바꾼다.
 // 공유기의 /usr/libexec/nmmwrt-update가 내려받고 sha256을 검사해 설치한다 (브라우저는 GitHub 파일을 직접 받을 수 없다).
 
 const NMM_UPDATER = '/usr/libexec/nmmwrt-update';
@@ -27,8 +27,8 @@ function nmmVersionText(v) {
   return /^\d+\.\d+\.\d+$/.test(String(v || '')) ? `v${v}` : (v || '-');
 }
 
-// 첫 부팅 때 NMMWrt를 내려받아 설치하는 스크립트 (업그레이드 서버의 defaults, 40KB 제한 안).
-// 설정 유지로 이미 NMMWrt가 있으면 아무것도 안 한다. 부팅 직후에는 인터넷이 없을 수 있어 30분 동안 다시 시도한다.
+// 첫 부팅 때 wrtTIME를 내려받아 설치하는 스크립트 (업그레이드 서버의 defaults, 40KB 제한 안).
+// 설정 유지로 이미 wrtTIME가 있으면 아무것도 안 한다. 부팅 직후에는 인터넷이 없을 수 있어 30분 동안 다시 시도한다.
 function nmmFirstBootScript(n) {
   return `#!/bin/sh
 [ -f /www/nmm/VERSION ] && exit 0
@@ -64,7 +64,7 @@ function nmmUpdateCard() {
   const fail = (code) => result.replaceChildren(h('p', { class: 'msg' }, NMM_ERRORS[code] || `업데이트하지 못했습니다. (${code})`));
 
   async function install(info, btn) {
-    if (!await confirmDialog('NMMWrt 업데이트', `NMMWrt를 ${nmmVersionText(info.latest)} 버전으로 바꿉니다. 공유기 설정과 인터넷 연결은 그대로입니다.`, '업데이트')) return;
+    if (!await confirmDialog('wrtTIME 업데이트', `wrtTIME를 ${nmmVersionText(info.latest)} 버전으로 바꿉니다. 공유기 설정과 인터넷 연결은 그대로입니다.`, '업데이트')) return;
     btn.disabled = true;
     checkBtn.disabled = true;
     result.replaceChildren(h('p', { class: 'muted' }, '내려받아 설치하는 중...'));
@@ -106,8 +106,8 @@ function nmmUpdateCard() {
   });
 
   return h('section', { class: 'card form-card' },
-    h('div', { class: 'card-head' }, h('h3', null, 'NMMWrt 업데이트')),
-    h('p', { class: 'muted' }, '펌웨어는 그대로 두고 NMMWrt 화면만 새 버전으로 바꿉니다.'),
+    h('div', { class: 'card-head' }, h('h3', null, 'wrtTIME 업데이트')),
+    h('p', { class: 'muted' }, '펌웨어는 그대로 두고 wrtTIME 화면만 새 버전으로 바꿉니다.'),
     kv([['지금 버전', curText]]),
     h('div', { class: 'actions' }, checkBtn), result);
 }

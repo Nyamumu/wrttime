@@ -1,4 +1,4 @@
-// 트래픽 규칙 (NAT/라우터 관리): LuCI의 Firewall > Traffic Rules를 NMMWrt 방식으로 다시 만든 것. firewall의 rule 섹션.
+// 트래픽 규칙 (NAT/라우터 관리): LuCI의 Firewall > Traffic Rules를 wrtTIME 방식으로 다시 만든 것. firewall의 rule 섹션.
 //   방향: 도착(dest)이 없으면 공유기로 들어옴(input), 출발(src)이 없으면 공유기에서 나감(output), 둘 다 있으면 전달(forward).
 //   '*'는 모든 영역. 이 화면이 다루지 않는 옵션(예: helper, set_mark, extra)은 건드리지 않고 그대로 둔다.
 

@@ -1,4 +1,4 @@
-// 방화벽 설정 (NAT/라우터 관리): LuCI의 Firewall > General Settings를 NMMWrt 방식으로 다시 만든 것.
+// 방화벽 설정 (NAT/라우터 관리): LuCI의 Firewall > General Settings를 wrtTIME 방식으로 다시 만든 것.
 //   기본 정책: firewall의 defaults 섹션 (SYN-flood 방어, 잘못된 패킷 버리기, input/output/forward)
 //   오프로딩: defaults의 flow_offloading(소프트웨어), flow_offloading_hw(하드웨어)
 //   영역(zone): 정책/마스커레이드/MSS 클램핑/포함 네트워크 + 영역 간 전달(forwarding 섹션)

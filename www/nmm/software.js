@@ -76,7 +76,7 @@ async function apkRunSteps(title, steps, note) {
     } catch (e) {
       if (await handleDenied(e) === 'expired') return false;
       box.textContent = e instanceof RpcError && e.code === UBUS_PERMISSION_DENIED
-        ? '권한이 없습니다. (ACL에 apk 실행이 없습니다. 최신 NMMWrt를 다시 배포해 주세요.)'
+        ? '권한이 없습니다. (ACL에 apk 실행이 없습니다. 최신 wrtTIME를 다시 배포해 주세요.)'
         : `실행하지 못했습니다. 시간이 오래 걸려 응답을 놓쳤을 수 있으니 잠시 뒤 목록을 다시 확인해 주세요.\n(${e.message || e})`;
       ok.disabled = false;
       return false;
@@ -159,7 +159,7 @@ function softwarePage(root) {
     } catch (e) {
       if (await handleDenied(e) === 'expired') return;
       infoModal('저장소 공개 키', e instanceof RpcError && e.code === UBUS_PERMISSION_DENIED
-        ? '공개 키를 읽을 권한이 없습니다. 최신 NMMWrt를 다시 설치해 주세요.' : '공개 키 목록을 읽지 못했습니다.', true);
+        ? '공개 키를 읽을 권한이 없습니다. 최신 wrtTIME를 다시 설치해 주세요.' : '공개 키 목록을 읽지 못했습니다.', true);
       return;
     }
     const keyPart = (text) => {
@@ -193,7 +193,7 @@ function softwarePage(root) {
         await ubus('file', 'write', { path: `${APK_KEYS_DIR}/${base}.pem`, data: `${text}\n`, mode: 0o644 });
       } catch (e) {
         addBtn.disabled = false;
-        if (await handleDenied(e) !== 'expired') fPem.setError('키를 저장하지 못했습니다. 최신 NMMWrt가 설치되어 있는지 확인해 주세요');
+        if (await handleDenied(e) !== 'expired') fPem.setError('키를 저장하지 못했습니다. 최신 wrtTIME가 설치되어 있는지 확인해 주세요');
         return;
       }
       openKeys(`'${base}.pem' 키를 등록했습니다. 새 저장소를 쓰려면 "목록 새로 받기"를 눌러 주세요.`);
@@ -222,7 +222,7 @@ function softwarePage(root) {
     try {
       await ubus('file', 'remove', { path: `${APK_KEYS_DIR}/${k.name}` });
     } catch (e) {
-      if (await handleDenied(e) !== 'expired') infoModal('공개 키 삭제', '키를 삭제하지 못했습니다. 최신 NMMWrt가 설치되어 있는지 확인해 주세요.', true);
+      if (await handleDenied(e) !== 'expired') infoModal('공개 키 삭제', '키를 삭제하지 못했습니다. 최신 wrtTIME가 설치되어 있는지 확인해 주세요.', true);
       return;
     }
     openKeys(`'${k.name}' 키를 삭제했습니다.`);

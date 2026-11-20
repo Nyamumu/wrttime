@@ -4,7 +4,7 @@
 //     wireless: wifi-iface guest_<radio>
 //   VLAN 네트워크: VLAN 설정 메뉴에서 '별도 내부 네트워크'로 이미 만든 VLAN을 골라 무선을 붙이고 무선 격리를 고른다.
 //     주소/DHCP/포트와 접속 허용(인터넷/내부 접근/관리 화면)은 VLAN 설정 메뉴에서 정한다 (사용자 요청).
-// 방화벽 규칙/포워딩 이름은 'NMMWrt ...'로 붙여서 우리 것을 알아본다.
+// 방화벽 규칙/포워딩 이름은 'wrtTIME ...'로 붙여서 우리 것을 알아본다.
 
 const GUEST = {
   key: 'guest', title: '게스트 네트워크', ip: '192.168.30.1', suffix: '-Guest', lease: '2h',
@@ -167,7 +167,7 @@ function guestPage(root) {
     const key = k.key;
     const iface = ctx.ifaces.find((i) => i['.name'] === key);
     const bridge = ctx.devs.find((s) => s.type === 'bridge' && s.name === `br-${key}`);
-    const ourFw = ctx.fw.some((s) => String(s.name || '').startsWith(`NMMWrt ${key} `));
+    const ourFw = ctx.fw.some((s) => ['wrtTIME', 'NMMWrt'].some((p) => String(s.name || '').startsWith(`${p} ${key} `)));
     const foreign = iface && ifaceDev(iface) !== `br-${key}` && !ourFw;
     const enabled = !!iface && !foreign;
     const head = h('div', { class: 'card-head' }, h('h3', null, k.title),

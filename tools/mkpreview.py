@@ -44,7 +44,7 @@ mock = r"""
 html = f"""<!doctype html>
 <html lang="ko"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>NMMWrt (미리보기)</title>
+<title>wrtTIME (미리보기)</title>
 <style>{css}</style></head>
 <body><div id="app"></div>
 <script>{mock}</script>

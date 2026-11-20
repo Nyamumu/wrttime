@@ -155,7 +155,10 @@ function portForwardPage(root) {
 
 /* ---------- 인터넷 접속 차단 ---------- */
 
-const BLOCK_PREFIX = 'NMMWrt 차단: ';
+const BLOCK_PREFIX = 'wrtTIME 차단: ';
+// 이름을 바꾸기 전(NMMWrt)에 만든 차단 규칙도 알아본다
+const BLOCK_PREFIXES = [BLOCK_PREFIX, 'NMMWrt 차단: '];
+const blockPrefixOf = (name) => BLOCK_PREFIXES.find((p) => String(name || '').startsWith(p));
 const WEEKDAYS = [['Mon', '월'], ['Tue', '화'], ['Wed', '수'], ['Thu', '목'], ['Fri', '금'], ['Sat', '토'], ['Sun', '일']];
 
 function blockTimeText(r) {
@@ -186,7 +189,7 @@ function accessPage(root) {
   }
 
   function render({ sections, leases }) {
-    const mine = sections.filter((s) => s['.type'] === 'rule' && String(s.name || '').startsWith(BLOCK_PREFIX));
+    const mine = sections.filter((s) => s['.type'] === 'rule' && blockPrefixOf(s.name));
     // 자정을 넘는 시간대는 규칙 두 개로 저장하므로 이름으로 묶어 보여 준다
     const groups = new Map();
     for (const r of mine) {
@@ -195,7 +198,7 @@ function accessPage(root) {
     }
     const byMac = new Map(leases.map((l) => [l.mac.toLowerCase(), l]));
     const rows = [...groups.entries()].map(([nm, rs]) => {
-      const label = nm.slice(BLOCK_PREFIX.length);
+      const label = nm.slice(blockPrefixOf(nm).length);
       const mac = asList(rs[0].src_mac)[0] || '-';
       const lease = byMac.get(String(mac).toLowerCase());
       const timeText = rs.length > 1
@@ -257,7 +260,7 @@ function accessPage(root) {
       const v = { label: label.value.trim(), mac: mac.value.trim().toLowerCase() };
       let bad = false;
       if (!v.label) { f.label.setError('이름을 입력해 주세요.'); bad = true; }
-      else if (groups.has(BLOCK_PREFIX + v.label)) { f.label.setError('같은 이름의 규칙이 있습니다.'); bad = true; }
+      else if (BLOCK_PREFIXES.some((p) => groups.has(p + v.label))) { f.label.setError('같은 이름의 규칙이 있습니다.'); bad = true; }
       if (!isMac(v.mac)) { f.mac.setError('MAC 주소 형식이 올바르지 않습니다.'); bad = true; }
       const base = { name: BLOCK_PREFIX + v.label, src: 'lan', dest: 'wan', src_mac: v.mac, proto: 'all', target: 'REJECT' };
       let ops;

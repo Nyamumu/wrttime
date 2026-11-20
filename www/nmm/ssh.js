@@ -142,7 +142,7 @@ function sshPage(root) {
       await ubus('file', 'write', { path: SSH_KEYS_PATH, data: lines.length ? `${lines.join('\n')}\n` : '', mode: SSH_KEYS_MODE });
       return true;
     } catch (e) {
-      if (await handleDenied(e) !== 'expired') infoModal('공개 키', '공개 키를 저장하지 못했습니다. 최신 NMMWrt가 설치되어 있는지 확인해 주세요.', true);
+      if (await handleDenied(e) !== 'expired') infoModal('공개 키', '공개 키를 저장하지 못했습니다. 최신 wrtTIME가 설치되어 있는지 확인해 주세요.', true);
       return false;
     }
   }
@@ -150,7 +150,7 @@ function sshPage(root) {
   function keysCard(ctx) {
     if (!ctx.keysOk) {
       return h('section', { class: 'card form-card' }, h('div', { class: 'card-head' }, h('h3', null, '공개 키')),
-        h('p', { class: 'msg' }, '공개 키를 읽을 권한이 없습니다. 최신 NMMWrt를 다시 설치해 주세요.'));
+        h('p', { class: 'msg' }, '공개 키를 읽을 권한이 없습니다. 최신 wrtTIME를 다시 설치해 주세요.'));
     }
     const passwordOff = ctx.instances.length > 0 && ctx.instances.every((s) => !sshBool(s.PasswordAuth, true) || !sshBool(s.RootPasswordAuth, true));
     const rows = ctx.lines.map((line) => ({ line, key: sshParseKey(line) })).filter((x) => x.key).map(({ line, key }) => h('tr', null,

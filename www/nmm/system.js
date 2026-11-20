@@ -456,7 +456,7 @@ function systemInfoPage(root) {
       ['아키텍처', board.system || '-'],
       ['대상 플랫폼', rel.target || '-'],
       ['펌웨어 버전', firmware || '-'],
-      ['NMMWrt 버전', nmmVersion || '-'],
+      ['wrtTIME 버전', nmmVersion || '-'],
       ['커널 버전', board.kernel || '-'],
       ['공유기 시각', info.localtime ? fmtRouterTime(info.localtime) : '-'],
       ['가동 시간', info.uptime != null ? fmtUptime(info.uptime) : '-'],

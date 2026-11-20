@@ -1,15 +1,15 @@
 <!doctype html>
-<!-- NMMWRT-ROOT: 공유기 주소(http://공유기/)로 들어오면 NMMWrt(/nmm/)로 보낸다. deploy.sh가 설치한다.
+<!-- NMMWRT-ROOT: 공유기 주소(http://공유기/)로 들어오면 wrtTIME(/nmm/)로 보낸다. deploy.sh가 설치한다.
      원래 LuCI의 index.html은 /www/index.html.luci 에 보관된다. LuCI는 /cgi-bin/luci/ 로 그대로 열 수 있다. -->
 <html lang="ko">
 <head>
   <meta charset="utf-8">
   <meta http-equiv="Cache-Control" content="no-cache">
   <meta http-equiv="refresh" content="0; URL=nmm/">
-  <title>NMMWrt</title>
+  <title>wrtTIME</title>
   <script>location.replace('nmm/' + location.hash);</script>
 </head>
 <body>
-  <a href="nmm/">NMMWrt로 이동</a> · <a href="cgi-bin/luci/">LuCI</a>
+  <a href="nmm/">wrtTIME로 이동</a> · <a href="cgi-bin/luci/">LuCI</a>
 </body>
 </html>

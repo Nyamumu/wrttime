@@ -131,18 +131,18 @@ function asuCard(onImage) {
       version,
       packages,
       diff_packages: true,
-      client: 'nmmwrt/1.0',
+      client: 'wrttime/1.0',
     };
-    // 첫 부팅 때 NMMWrt를 내려받는 스크립트를 펌웨어에 넣는다. 확인이 안 되면 NMMWrt 없이 만들지 사용자에게 묻는다.
-    say('NMMWrt 최신 버전을 확인하는 중...');
+    // 첫 부팅 때 wrtTIME를 내려받는 스크립트를 펌웨어에 넣는다. 확인이 안 되면 wrtTIME 없이 만들지 사용자에게 묻는다.
+    say('wrtTIME 최신 버전을 확인하는 중...');
     const nmm = await nmmUpdater('check').catch(() => ({ error: 'download' }));
     if (nmm.error) {
-      const go = await confirmDialog('NMMWrt 포함', `NMMWrt 최신 버전을 확인하지 못했습니다. (${NMM_ERRORS[nmm.error] || nmm.error}) NMMWrt 내려받기 없이 펌웨어를 만들까요? "설정 유지"로 업그레이드하면 지금 NMMWrt는 그대로 남습니다.`, '그대로 만들기');
+      const go = await confirmDialog('wrtTIME 포함', `wrtTIME 최신 버전을 확인하지 못했습니다. (${NMM_ERRORS[nmm.error] || nmm.error}) wrtTIME 내려받기 없이 펌웨어를 만들까요? "설정 유지"로 업그레이드하면 지금 wrtTIME는 그대로 남습니다.`, '그대로 만들기');
       if (!go) { log.replaceChildren(); return; }
     } else {
       req.defaults = nmmFirstBootScript(nmm);
     }
-    say(`서버에 요청하는 중... (패키지 ${packages.length}개${req.defaults ? ', NMMWrt 포함' : ''})`);
+    say(`서버에 요청하는 중... (패키지 ${packages.length}개${req.defaults ? ', wrtTIME 포함' : ''})`);
     let res = await asuJson(`${server}/api/v1/build`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(req),
     }, 60000);

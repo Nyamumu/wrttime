@@ -1,4 +1,4 @@
-// NMMWrt 관리 UI - 공통 기능 + 홈 + 인터넷 설정 (빌드 불필요: uhttpd가 정적 파일로 서빙)
+// wrtTIME 관리 UI - 공통 기능 + 홈 + 인터넷 설정 (빌드 불필요: uhttpd가 정적 파일로 서빙)
 // 통신: uhttpd의 /ubus JSON-RPC. LuCI 전용 객체(luci-rpc 등)는 사용하지 않는다.
 // 일반 스크립트(defer)라서 여기의 최상위 함수/상수는 다른 페이지 파일에서 그대로 쓴다.
 
@@ -333,7 +333,7 @@ function pageTitle(text) {
 /* ---------- 로그인 / 로그아웃 ---------- */
 
 function logoEl() {
-  return h('span', { class: 'logo' }, 'NMM', h('b', null, 'Wrt'));
+  return h('span', { class: 'logo' }, 'wrt', h('b', null, 'TIME'));
 }
 
 function renderLogin(message) {

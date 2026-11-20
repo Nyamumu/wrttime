@@ -49,7 +49,7 @@ def build(out):
     if marker not in index:
         raise SystemExit("index.html에서 스타일시트 줄을 찾지 못했습니다")
     index = index.replace(marker, f'<script src="demo/demo.js?v={build}"></script>\n  {marker}', 1)
-    index = index.replace("__V__", build).replace("<title>NMMWrt</title>", "<title>NMMWrt 데모</title>")
+    index = index.replace("__V__", build).replace("<title>wrtTIME</title>", "<title>wrtTIME 데모</title>")
     write(out, "index.html", index)
 
     write(out, "VERSION", version + "\n")

@@ -2,7 +2,7 @@
 # 사용법: ./release.sh   -> dist/에 nmmwrt.tar.gz와 latest.json을 만든다.
 # GitHub에 올리기: 두 곳에 모두 올린다.
 #   1) release 브랜치: latest.json + install.sh + nmmwrt-<버전>.tar.gz (공유기가 raw.githubusercontent.com에서 먼저 받는다)
-#   2) gh release create v<버전> dist/nmmwrt.tar.gz dist/latest.json dist/install.sh --title "NMMWrt <버전>" (대신 쓰는 경로)
+#   2) gh release create v<버전> dist/nmmwrt.tar.gz dist/latest.json dist/install.sh --title "wrtTIME <버전>" (대신 쓰는 경로)
 set -e
 cd "$(dirname "$0")"
 [ -f release.conf ] || { echo "release.conf가 없습니다. REPO=owner/name 을 적어 주세요." >&2; exit 1; }

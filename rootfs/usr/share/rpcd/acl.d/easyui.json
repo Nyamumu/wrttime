@@ -1,6 +1,6 @@
 {
 	"easyui": {
-		"description": "NMMWrt 관리 UI",
+		"description": "wrtTIME 관리 UI",
 		"read": {
 			"ubus": {
 				"system": [ "info", "board" ],

@@ -172,7 +172,7 @@ class SessionAndAcl(Base):
         self.assertIn("busybox", self.call(sid, "rpc-sys", "packagelist", {"all": False})[1]["packages"])
 
     def test_nmmwrt_update_acl(self):
-        """NMMWrt 업데이트: check/install만 실행할 수 있다."""
+        """wrtTIME 업데이트: check/install만 실행할 수 있다."""
         sid = self.login()
         run = lambda *p: self.call(sid, "file", "exec", {"command": "/usr/libexec/nmmwrt-update", "params": list(p)})
         self.assertTrue(json.loads(run("check")[1]["stdout"])["update"])

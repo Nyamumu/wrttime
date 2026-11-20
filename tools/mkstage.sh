@@ -1,7 +1,7 @@
 #!/bin/sh
 # 사용법: tools/mkstage.sh <폴더> <빌드 시각(14자리)>
 # 공유기의 / 에 풀 파일을 <폴더>에 모은다. deploy.sh와 release.sh가 같이 쓴다.
-# NMMWrt 버전은 프로젝트의 VERSION 파일(예: 1.0.14), 빌드 시각은 브라우저 캐시를 피하는 ?v= 값이다.
+# wrtTIME 버전은 프로젝트의 VERSION 파일(예: 1.0.14), 빌드 시각은 브라우저 캐시를 피하는 ?v= 값이다.
 set -e
 STAGE="$1"
 V="$2"

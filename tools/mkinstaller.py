@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""NMMWrt 설치 파일 하나(dist/nmmwrt-install.sh)를 만든다.
+"""wrtTIME 설치 파일 하나(dist/nmmwrt-install.sh)를 만든다.
 
-설치 파일은 보통의 셸 스크립트이고 NMMWrt 파일을 모두 글자 그대로(here-document) 품고 있다.
+설치 파일은 보통의 셸 스크립트이고 wrtTIME 파일을 모두 글자 그대로(here-document) 품고 있다.
 공유기에 base64/scp/sftp가 없어도 되고, OpenWrt 기본 셸(busybox ash)만 있으면 설치된다.
 
   PC에서:      ssh root@공유기 sh < dist/nmmwrt-install.sh
@@ -51,7 +51,7 @@ def main():
         parts.append(f"cat > \"{target}\" <<'{DELIM}'\n{text.rstrip(chr(10))}\n{DELIM}\n")
 
     script = f"""#!/bin/sh
-# NMMWrt 설치 파일 (버전 {version}) - OpenWrt 25 이상
+# wrtTIME 설치 파일 (버전 {version}) - OpenWrt 25 이상
 #   PC에서:      ssh root@공유기 sh < nmmwrt-install.sh
 #   공유기에서:  sh nmmwrt-install.sh            삭제: sh nmmwrt-install.sh uninstall
 # tools/mkinstaller.py가 만든 파일이다. 직접 고치지 말 것.
@@ -61,19 +61,19 @@ VERSION={version}
 if [ ! -f /etc/openwrt_release ]; then echo "OpenWrt 공유기가 아닙니다."; exit 1; fi
 . /etc/openwrt_release
 case "$DISTRIB_RELEASE" in
-  1[0-9].*|2[0-4].*) echo "NMMWrt는 OpenWrt 25 이상이 필요합니다. (이 공유기: $DISTRIB_RELEASE)"; exit 1 ;;
+  1[0-9].*|2[0-4].*) echo "wrtTIME는 OpenWrt 25 이상이 필요합니다. (이 공유기: $DISTRIB_RELEASE)"; exit 1 ;;
 esac
 
 if [ "$1" = "uninstall" ]; then
   rm -rf /www/nmm /usr/share/rpcd/acl.d/easyui.json /lib/upgrade/keep.d/nmmwrt
   if [ -f /www/index.html.luci ]; then mv /www/index.html.luci /www/index.html; echo "첫 화면을 LuCI로 되돌렸습니다."; fi
   /etc/init.d/rpcd reload
-  echo "NMMWrt를 지웠습니다."
+  echo "wrtTIME를 지웠습니다."
   exit 0
 fi
 
-echo "NMMWrt $VERSION 설치 중... ($(cat /tmp/sysinfo/model 2>/dev/null || echo OpenWrt), $DISTRIB_RELEASE)"
-# 공유기 주소로 들어오면 NMMWrt로 가게 첫 화면을 바꾼다. 원래 것(LuCI로 보내는 파일)은 처음 한 번만 보관한다.
+echo "wrtTIME $VERSION 설치 중... ($(cat /tmp/sysinfo/model 2>/dev/null || echo OpenWrt), $DISTRIB_RELEASE)"
+# 공유기 주소로 들어오면 wrtTIME로 가게 첫 화면을 바꾼다. 원래 것(LuCI로 보내는 파일)은 처음 한 번만 보관한다.
 if [ -f /www/index.html ] && ! grep -q NMMWRT-ROOT /www/index.html; then
   cp /www/index.html /www/index.html.luci
   echo "원래 첫 화면을 /www/index.html.luci 로 보관했습니다."
@@ -91,7 +91,7 @@ chmod 644 /www/nmm/* /www/index.html /usr/share/rpcd/acl.d/easyui.json /lib/upgr
 
 /etc/init.d/rpcd reload
 KEPT=$(sysupgrade -l 2>/dev/null | grep -cE "^/www/nmm/|^/www/index.html$|easyui.json$|keep.d/nmmwrt$" || true)
-echo "완료: NMMWrt $VERSION  (펌웨어 업그레이드 때 보관되는 파일 $KEPT개)"
+echo "완료: wrtTIME $VERSION  (펌웨어 업그레이드 때 보관되는 파일 $KEPT개)"
 echo "접속: http://$(uci -q get network.lan.ipaddr | cut -d/ -f1)/"
 """
     os.makedirs(os.path.join(BASE, "dist"), exist_ok=True)

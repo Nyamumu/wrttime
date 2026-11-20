@@ -177,7 +177,7 @@ function ipsetPage(root) {
     const entries = h('textarea', { rows: '7', spellcheck: 'false' });
     entries.value = asList(s ? s.entry : []).join('\n');
     entries.readOnly = !known;
-    const loadfile = h('input', { type: 'text', value: s ? s.loadfile || '' : '', spellcheck: 'false', placeholder: '예: /etc/nmmwrt/blocklist.txt' });
+    const loadfile = h('input', { type: 'text', value: s ? s.loadfile || '' : '', spellcheck: 'false', placeholder: '예: /etc/wrttime/blocklist.txt' });
     const enabled = toggleEl(s ? s.enabled !== '0' : true, '이 세트 사용');
     const f = {
       name: formField('이름', name, '영문, 숫자, _ . - (영문이나 _로 시작)'),

@@ -1,5 +1,5 @@
 #!/bin/sh
-# NMMWrt 설치 스크립트. 공유기에 SSH로 접속해서 실행한다:
+# wrtTIME 설치 스크립트. 공유기에 SSH로 접속해서 실행한다:
 #   uclient-fetch -qO- https://raw.githubusercontent.com/__REPO__/release/install.sh | sh
 # 최신 버전을 받아 sha256과 파일 경로를 검사한 뒤 설치한다. 이미 설치되어 있으면 최신 버전으로 바꾼다.
 # 내려받다가 끊겨도 일부만 실행되지 않도록 전체를 함수로 감싼다.
@@ -31,7 +31,7 @@ main() {
 	echo "$V" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$' || fail "버전 정보가 올바르지 않습니다."
 	echo "$S" | grep -qE '^[0-9a-f]{64}$' || fail "버전 정보가 올바르지 않습니다."
 
-	echo "NMMWrt $V 내려받는 중..."
+	echo "wrtTIME $V 내려받는 중..."
 	get "$WORK/n.tgz" "$RAW/nmmwrt-$V.tar.gz" "$BASE/download/v$V/nmmwrt.tar.gz" || fail "설치 파일을 받지 못했습니다."
 	[ "$(sha256sum "$WORK/n.tgz" | cut -d' ' -f1)" = "$S" ] || fail "설치 파일 검사(sha256)에 실패했습니다."
 
@@ -52,7 +52,7 @@ main() {
 	rm -rf "$WORK"
 	/etc/init.d/rpcd reload >/dev/null 2>&1
 
-	echo "NMMWrt $V 설치 완료. 브라우저에서 공유기 주소로 접속해 주세요."
+	echo "wrtTIME $V 설치 완료. 브라우저에서 공유기 주소로 접속해 주세요."
 }
 
 main "$@"

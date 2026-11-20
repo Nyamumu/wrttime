@@ -618,7 +618,7 @@ async function makeNetCtx() {
 
 /* ---------- 접속 허용 (VLAN 설정의 별도 네트워크, 게스트 네트워크가 같이 쓴다) ---------- */
 // 정책: wan(이 네트워크 -> 인터넷), lanTo(내부 -> 이 네트워크), toLan(이 네트워크 -> 내부), input(공유기 관리 화면), isolate(무선 격리)
-// 방화벽 이름은 'NMMWrt <prefix> 인터넷/내부 접근/내부로/DNS/DHCP' (VLAN 설정: prefix = 'VLAN <이름>', 게스트: 'guest')
+// 방화벽 이름은 'wrtTIME <prefix> 인터넷/내부 접근/내부로/DNS/DHCP' (VLAN 설정: prefix = 'VLAN <이름>', 게스트: 'guest')
 
 const NET_POLICY_ITEMS = [
   ['wan', '인터넷 사용 허용'],
@@ -651,7 +651,7 @@ function readPolicy(ctx, n, wifis, fallback) {
 
 // 정책 변경: zone input, 포워딩. zone이 없으면 zone과 DNS/DHCP 허용 규칙부터 만든다.
 function policyOps(n, st, policy, prefix) {
-  const fwName = (what) => `NMMWrt ${prefix} ${what}`;
+  const fwName = (what) => `wrtTIME ${prefix} ${what}`;
   const ops = [];
   const spec = {
     wan: [st.z, st.wanZ, fwName('인터넷')],
@@ -709,7 +709,7 @@ function vlanNetworkDeleteOps(ctx, n, vlanSection) {
   for (const s of ctx.fw) {
     const mine = (s['.type'] === 'zone' && s.name === n)
       || (s['.type'] === 'forwarding' && (s.src === n || s.dest === n))
-      || (s['.type'] === 'rule' && s.src === n && String(s.name || '').startsWith('NMMWrt'));
+      || (s['.type'] === 'rule' && s.src === n && /^(wrtTIME|NMMWrt) /.test(String(s.name || '')));  // 이름을 바꾸기 전(NMMWrt) 규칙도 포함
     if (mine) add('firewall', s['.name']);
   }
   return ops;

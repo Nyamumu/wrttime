@@ -1,4 +1,4 @@
-// NAT 규칙 (NAT/라우터 관리): LuCI의 Firewall > NAT Rules를 NMMWrt 방식으로 다시 만든 것. firewall의 nat 섹션 (fw4).
+// NAT 규칙 (NAT/라우터 관리): LuCI의 Firewall > NAT Rules를 wrtTIME 방식으로 다시 만든 것. firewall의 nat 섹션 (fw4).
 //   나가는 영역(src)으로 나가는 패킷의 출발 주소를 바꾼다: MASQUERADE(그 인터페이스 주소로), SNAT(정한 주소로), ACCEPT(바꾸지 않음).
 //   이 화면이 다루지 않는 옵션(extra, mark 등)은 그대로 둔다. ruleList/okIp/ruleProtos는 fwrules.js의 것을 쓴다.
 

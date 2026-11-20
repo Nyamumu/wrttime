@@ -1,8 +1,8 @@
-// 추가 기능: LuCI에 설치된 서비스(Services 메뉴)를 찾아 메뉴로 보여 주고, 그 LuCI 화면을 NMMWrt 안에 띄운다.
+// 추가 기능: LuCI에 설치된 서비스(Services 메뉴)를 찾아 메뉴로 보여 주고, 그 LuCI 화면을 wrtTIME 안에 띄운다.
 // - 목록: /usr/share/luci/menu.d/*.json 중 'admin/services/<이름>' 항목 (LuCI 앱이 설치하는 메뉴 정의).
 //   depends.uci의 설정 파일이 없으면 LuCI처럼 숨긴다. 서비스가 하나도 없으면(LuCI가 없거나 앱이 없으면) 메뉴 자체를 안 보인다.
 // - 화면: 같은 주소의 /cgi-bin/luci/admin/services/<이름>을 iframe으로 열고, LuCI의 머리글/메뉴를 숨겨 내용만 보인다.
-// - 로그인: NMMWrt 로그인 때 같은 계정으로 LuCI에도 로그인해 둔다(luciLogin). LuCI 세션이 끝났으면 iframe에 LuCI 로그인이 보인다.
+// - 로그인: wrtTIME 로그인 때 같은 계정으로 LuCI에도 로그인해 둔다(luciLogin). LuCI 세션이 끝났으면 iframe에 LuCI 로그인이 보인다.
 
 const LUCI_MENU_DIR = '/usr/share/luci/menu.d';
 const LUCI_BASE = '/cgi-bin/luci';
@@ -40,7 +40,7 @@ async function readLuciServices(entries) {
   return [...found.values()].sort((a, b) => (a.order - b.order) || a.title.localeCompare(b.title));
 }
 
-// NMMWrt 로그인과 함께 LuCI에도 로그인한다 (LuCI가 sysauth 쿠키를 준다). 실패해도 상관없다.
+// wrtTIME 로그인과 함께 LuCI에도 로그인한다 (LuCI가 sysauth 쿠키를 준다). 실패해도 상관없다.
 function luciLogin(username, password) {
   const body = new URLSearchParams({ luci_username: username, luci_password: password });
   return fetch(`${LUCI_BASE}/`, { method: 'POST', body, credentials: 'same-origin', redirect: 'manual' })

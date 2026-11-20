@@ -17,7 +17,7 @@ class DemoUbus(fakeubus.FakeUbus):
     LUCI_MENU = {'luci-base.json': {}}
 
 fake = DemoUbus(acl_files=['/demo/easyui.json'], password='admin', apply_delay=1.5, log=lambda *a: None, profile='mt6000')
-# 데모는 항상 최신 버전이다 (NMMWrt 업데이트 카드에 새 버전이 뜨지 않게)
+# 데모는 항상 최신 버전이다 (wrtTIME 업데이트 카드에 새 버전이 뜨지 않게)
 fake.nmm_version = fake.nmm_latest = '__V__'
 
 def demo_ubus(body):
@@ -58,7 +58,7 @@ def demo_upload(sid, path, data):
   }
 
   const loadText = el('span', { textContent: '데모를 준비하는 중입니다. 처음에는 10초쯤 걸릴 수 있습니다.' });
-  const loadBox = el('div', { id: 'nmm-demo-load' }, el('b', { textContent: 'NMMWrt' }), loadText);
+  const loadBox = el('div', { id: 'nmm-demo-load' }, el('b', { textContent: 'wrtTIME' }), loadText);
 
   function showShell() {
     document.head.append(el('style', { textContent: STYLE }));

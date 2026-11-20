@@ -1,4 +1,4 @@
-# NMMWrt: OpenWrt 쉬운 관리 UI
+# wrtTIME: OpenWrt 쉬운 관리 UI
 
 LuCI를 대신하는 쉬운 공유기 관리 화면입니다. **OpenWrt 25 이상**이 설치된 여러 공유기에서 쓰도록 만들었습니다.
 포트 수와 이름은 공유기 설정과 `/etc/board.json`에서 알아내고, 스위치 방식(DSA, swconfig) 둘 다 지원합니다.
