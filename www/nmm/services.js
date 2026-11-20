@@ -54,8 +54,8 @@ function ddnsPage(root) {
   }
 
   function render(services) {
-    // 우리가 만든 'nmmwrt' 섹션을 우선, 없으면 첫 번째 서비스를 고친다
-    const svc = services.find((s) => s['.name'] === 'nmmwrt') || services[0] || null;
+    // 우리가 만든 'wrttime' 섹션(이름을 바꾸기 전에는 'nmmwrt')을 우선, 없으면 첫 번째 서비스를 고친다
+    const svc = services.find((s) => s['.name'] === 'wrttime') || services.find((s) => s['.name'] === 'nmmwrt') || services[0] || null;
     const cur = svc || {};
     const on = toggleEl(svc ? svc.enabled === '1' : true, 'DDNS 사용');
     const service = selectEl(DDNS_SERVICES.map(([v, l]) => [v, l]), cur.service_name || 'duckdns.org');
@@ -99,7 +99,7 @@ function ddnsPage(root) {
       };
       const ops = svc
         ? [{ op: 'set', config: 'ddns', section: svc['.name'], values }]
-        : [{ op: 'add', config: 'ddns', type: 'service', name: 'nmmwrt', values }];
+        : [{ op: 'add', config: 'ddns', type: 'service', name: 'wrttime', values }];
       applyBtn.disabled = true;
       const r = await runApply(ops);
       applyBtn.disabled = false;
@@ -179,7 +179,7 @@ function trafficPage(root) {
       }
       const ops = q
         ? [{ op: 'set', config: 'sqm', section: q['.name'], values }]
-        : [{ op: 'add', config: 'sqm', type: 'queue', name: 'nmmwrt', values }];
+        : [{ op: 'add', config: 'sqm', type: 'queue', name: 'wrttime', values }];
       applyBtn.disabled = true;
       const r = await runApply(ops);
       applyBtn.disabled = false;
