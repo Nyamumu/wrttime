@@ -83,7 +83,13 @@ async function apkRunSteps(title, steps, note) {
     }
     const out = [res.stdout, res.stderr].filter(Boolean).join('\n').trim();
     if (out) log.push(out);
-    if (res.code !== 0) {
+    // apk update는 저장소 하나만 못 받아도 코드 1로 끝난다 ("1 unavailable ... 11124 distinct packages available").
+    // 받은 목록이 있으면 나머지 저장소로 계속한다 (설치할 패키지가 빠진 저장소에 있으면 다음 단계에서 실패한다).
+    const partial = step.params[0] === 'update' && res.code !== 0
+      && /(\d+) unavailable/.test(out) && +((/(\d+) distinct packages available/.exec(out) || [])[1] || 0) > 0;
+    if (partial) {
+      log.push(`일부 저장소(${/(\d+) unavailable/.exec(out)[1]}개)의 목록을 받지 못했습니다. 받은 목록으로 계속합니다.`);
+    } else if (res.code !== 0) {
       box.textContent = [`실패했습니다. (코드 ${res.code})`, ...log].join('\n\n');
       box.classList.add('apk-fail');
       ok.disabled = false;
