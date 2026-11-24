@@ -309,6 +309,91 @@ function firmwarePage(root) {
 
 /* ---------- 재시작 / 백업 / 초기화 ---------- */
 
+/* ---------- 예약 재시작 (cron) ---------- */
+// /etc/crontabs/root에서 끝에 '# wrttime-reboot'가 붙은 줄 하나만 이 화면이 관리한다. 다른 줄은 그대로 둔다.
+// 'sleep 70 && touch /etc/banner': 재시작 직후 시계가 아직 이전 시각이면 같은 분에 또 재시작하는 것을 막는다
+//   (OpenWrt는 부팅할 때 /etc 안에서 가장 늦은 파일 시각으로 시계를 맞춘다).
+
+const CRONTAB = '/etc/crontabs/root';
+const REBOOT_MARK = '# wrttime-reboot';
+const REBOOT_CMD = 'sleep 70 && touch /etc/banner && reboot';
+const CRON_DAYS = ['일', '월', '화', '수', '목', '금', '토'];
+
+// '30 4 * * 1,4 ... # wrttime-reboot' -> { hour, minute, days: [1, 4] } (매일이면 days 0~6)
+function parseRebootLine(text) {
+  const line = text.split('\n').find((l) => l.trim().endsWith(REBOOT_MARK) && !l.trim().startsWith('#'));
+  const m = line && /^\s*(\d{1,2})\s+(\d{1,2})\s+\*\s+\*\s+(\S+)/.exec(line);
+  if (!m) return null;
+  const days = m[3] === '*' ? [0, 1, 2, 3, 4, 5, 6] : m[3].split(',').map(Number).filter((d) => d >= 0 && d <= 6);
+  return { minute: +m[1], hour: +m[2], days };
+}
+
+function scheduledRebootCard() {
+  const box = h('div', null, h('span', { class: 'muted' }, '불러오는 중...'));
+  (async () => {
+    let text = '';
+    let info = null;
+    try {
+      text = (await ubus('file', 'read', { path: CRONTAB })).data || '';
+    } catch (e) {
+      if (!(e instanceof RpcError && e.code === UBUS_NOT_FOUND)) {
+        box.replaceChildren(h('p', { class: 'msg' }, '예약 작업 설정을 읽지 못했습니다.'));
+        return;
+      }
+    }
+    info = await ubus('system', 'info').catch(() => null);
+    const cur = parseRebootLine(text);
+    const on = toggleEl(!!cur, '예약 재시작 사용');
+    const p2 = (n) => String(n).padStart(2, '0');
+    const time = h('input', { type: 'time', value: cur ? `${p2(cur.hour)}:${p2(cur.minute)}` : '04:00', step: '60' });
+    const fTime = formField('시각', time, info && info.localtime ? `지금 공유기 시각: ${fmtRouterTime(info.localtime)}` : '');
+    const days = (cur ? cur.days : [0, 1, 2, 3, 4, 5, 6]);
+    const dayChecks = CRON_DAYS.map((name, i) => toggleEl(days.includes(i), name));
+    const dayErr = h('small', { class: 'err', hidden: true });
+    const dayBox = h('div', { class: 'field' }, h('span', null, '요일'), h('div', { class: 'day-checks' }, dayChecks.map((d) => d.el)), dayErr);
+    const fields = h('div', null, fTime.el, dayBox);
+    const sync = () => { fields.hidden = !on.input.checked; };
+    on.input.addEventListener('change', sync);
+    sync();
+
+    const save = h('button', { class: 'btn btn-inline', type: 'button' }, '저장');
+    save.addEventListener('click', async () => {
+      fTime.setError(null); dayErr.hidden = true;
+      const want = on.input.checked;
+      const m = /^(\d{2}):(\d{2})$/.exec(time.value);
+      const sel = dayChecks.map((d, i) => (d.input.checked ? i : -1)).filter((i) => i >= 0);
+      if (want && !m) { fTime.setError('시각을 입력해 주세요.'); return; }
+      if (want && !sel.length) { dayErr.textContent = '하루 이상 골라 주세요.'; dayErr.hidden = false; return; }
+      const rest = text.split('\n').filter((l) => !l.trim().endsWith(REBOOT_MARK));
+      while (rest.length && !rest[rest.length - 1].trim()) rest.pop();
+      if (want) {
+        const dow = sel.length === 7 ? '*' : sel.join(',');
+        rest.push(`${+m[2]} ${+m[1]} * * ${dow} ${REBOOT_CMD} ${REBOOT_MARK}`);
+      }
+      const data = rest.length ? rest.join('\n') + '\n' : '';
+      save.disabled = true;
+      try {
+        await ubus('file', 'write', { path: CRONTAB, data });
+        for (const a of ['enable', 'restart']) {
+          const r = await ubus('file', 'exec', { command: '/etc/init.d/cron', params: [a] }, state.sid, 30000);
+          if (r.code !== 0) throw new Error(r.stderr || String(r.code));
+        }
+        text = data;
+        infoModal('예약 재시작', want
+          ? `${sel.length === 7 ? '매일' : sel.map((i) => CRON_DAYS[i]).join(', ') + '요일'} ${time.value}에 공유기를 다시 시작합니다.`
+          : '예약 재시작을 껐습니다.');
+      } catch (e) {
+        if (await handleDenied(e) !== 'expired') infoModal('예약 재시작', '저장하지 못했습니다. 최신 wrtTIME를 다시 설치해 주세요.', true);
+      }
+      save.disabled = false;
+    });
+    box.replaceChildren(on.el, fields,
+      h('p', { class: 'muted' }, '공유기 시간대가 맞는지 기본 설정에서 확인하세요. 재시작하는 1~2분 동안 인터넷이 끊깁니다.'),
+      h('div', { class: 'actions' }, save));
+  })();
+  return card('예약 재시작', h('p', { class: 'muted' }, '정해 둔 시각에 공유기를 자동으로 다시 시작합니다. 오래 켜 두면 느려지는 공유기에 도움이 됩니다.'), box);
+}
+
 function maintenancePage(root) {
   const reboot = h('button', { class: 'btn btn-inline', type: 'button' }, '재시작');
   reboot.addEventListener('click', async () => {
@@ -381,6 +466,7 @@ function maintenancePage(root) {
 
   root.append(pageTitle('재시작 / 백업 / 초기화'),
     card('공유기 재시작', h('p', { class: 'muted' }, '인터넷이 느리거나 이상할 때 다시 시작해 보세요.'), h('div', { class: 'actions' }, reboot)),
+    scheduledRebootCard(),
     card('설정 백업', h('p', { class: 'muted' }, '지금 설정을 파일로 받아 둡니다. 비밀번호 등 민감한 정보가 들어 있으니 안전하게 보관하세요.'), h('div', { class: 'actions' }, backup)),
     card('설정 복원', h('p', { class: 'muted' }, '받아 둔 백업 파일로 설정을 되돌립니다. 같은 모델에서 만든 백업만 쓰세요.'), pick.el, h('div', { class: 'actions' }, restore)),
     card('공장 초기화', h('p', { class: 'muted' }, '모든 설정을 지우고 처음 상태로 되돌립니다.'), h('div', { class: 'actions' }, reset)));

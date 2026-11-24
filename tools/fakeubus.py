@@ -655,6 +655,19 @@ class FakeUbus:
             else:
                 return {"code": 1, "stderr": "unknown action\n"}
             return {"code": 0, "stdout": ""}
+        if cmd in ("/etc/init.d/miniupnpd", "/etc/init.d/cron") and params in (["enable"], ["restart"], ["stop"]):
+            name = cmd.rsplit("/", 1)[1]
+            if name == "miniupnpd":
+                if "upnpd" not in self.committed:
+                    return {"code": 127, "stderr": "not found\n"}
+                self.upnp_running = params != ["stop"] and \
+                    (find_section(self.running["upnpd"], "config") or {}).get("enabled") == "1"
+            self.log(f"[fakeubus] {name} {params[0]}")
+            return {"code": 0, "stdout": ""}
+        if cmd in self.DIAG_MISSING:
+            raise Status(UBUS_NOT_FOUND)  # 실제 rpcd: 없는 명령이면 [4]
+        if cmd in ("/bin/ping", "/usr/bin/traceroute", "/usr/bin/nslookup"):
+            return self._diag(cmd.rsplit("/", 1)[1], params)
         if cmd == "/usr/libexec/nmmwrt-update":
             # 가짜 업데이트: 새 버전이 하나 있고, 설치하면 최신이 된다 (데모는 nmm_latest와 nmm_version을 같게 둬서 최신으로 보인다)
             latest = getattr(self, "nmm_latest", "1.0.15")
@@ -670,6 +683,31 @@ class FakeUbus:
             return {"code": 0, "stdout": ""}
         return {"code": 127, "stderr": "not found\n"}
 
+    # ----- 네트워크 진단 흉내 -----
+    DIAG_MISSING = ("/usr/bin/ping", "/bin/traceroute", "/bin/nslookup")  # 다른 위치는 없는 공유기 (첫 위치를 찾는 흐름 확인)
+
+    def _diag(self, tool, params):
+        host = params[-1] if params else ""
+        v6 = "-6" in params
+        if host.endswith(".invalid"):
+            if tool == "nslookup":
+                return {"code": 1, "stdout": f"Server:\t\t127.0.0.1\nAddress:\t127.0.0.1:53\n\n** server can't find {host}: NXDOMAIN\n"}
+            return {"code": 1, "stderr": f"{tool}: bad address '{host}'\n"}
+        addr = "2001:4860:4860::8888" if v6 else ("8.8.8.8" if re.match(r"^[\d.]+$", host) else "223.130.200.107")
+        if tool == "ping":
+            lines = [f"PING {host} ({addr}): 56 data bytes"]
+            lines += [f"64 bytes from {addr}: seq={i} ttl=117 time={11.2 + i * 0.4:.3f} ms" for i in range(4)]
+            lines += ["", f"--- {host} ping statistics ---", "4 packets transmitted, 4 packets received, 0% packet loss",
+                      "round-trip min/avg/max = 11.200/11.800/12.400 ms"]
+            return {"code": 0, "stdout": "\n".join(lines) + "\n"}
+        if tool == "traceroute":
+            hops = ["192.0.2.1", "203.0.113.1", "198.51.100.9", addr] if not v6 else ["2001:db8::1", addr]
+            lines = [f"traceroute to {host} ({addr}), 20 hops max, 46 byte packets"]
+            lines += [f"{i + 1:2d}  {hp}  {1.5 + i * 3.1:.3f} ms" for i, hp in enumerate(hops)]
+            return {"code": 0, "stdout": "\n".join(lines) + "\n"}
+        return {"code": 0, "stdout": f"Server:\t\t127.0.0.1\nAddress:\t127.0.0.1:53\n\nNon-authoritative answer:\n"
+                                     f"Name:\t{host}\nAddress: {addr}\n"}
+
     # ----- 가짜 apk (소프트웨어 관리 화면 확인용) -----
     # 설치됨: 이름 -> (버전, 설명, 설치 크기). 저장소: 이름 -> (버전, 설명). 저장소 버전이 더 새로우면 업그레이드 가능.
     APK_INSTALLED = {
@@ -681,6 +719,7 @@ class FakeUbus:
         "uhttpd": ("2025.07.06-r1", "uHTTPd is a tiny single threaded HTTP server.", 81920),
         "libustream-mbedtls20201210": ("2026.03.01~99f1c0db-r1", "ustream SSL Library (mbedtls)", 20480),
         "px5g-mbedtls": ("13", "Px5g is a tiny standalone X.509 certificate generator.", 10240),
+        "wpad-basic-mbedtls": ("2025.08.26~ced4f9b2-r2", "This package contains a minimal IEEE 802.1x/WPA Authenticator and Supplicant", 655360),
     }
     APK_REPO = {
         "base-files": ("1659-r1", ""), "busybox": ("1.37.0-r5", ""), "dnsmasq": ("2.91-r2", ""),
@@ -693,14 +732,23 @@ class FakeUbus:
         "luci-app-sqm": ("26.320.60423~5331286", "Control the simple_qos SQM script"),
         "banip": ("1.9.1-r5", "banIP blocks IPs via named nftables Sets."),
         "igmpproxy": ("0.4-r2", "IGMP Proxy daemon"),
+        "wpad-basic-mbedtls": ("2025.08.26~ced4f9b2-r2", ""),
+        "wpad-mesh-mbedtls": ("2025.08.26~ced4f9b2-r2", "IEEE 802.1x Authenticator/Supplicant (with 802.11s mesh and SAE)"),
     }
     # 패키지를 설치하면 생기는 설정 파일 (--no-packages로 켠 공유기에서 설치 흐름을 확인한다)
-    APK_CONFIGS = {"ddns-scripts": "ddns", "sqm-scripts": "sqm", "banip": "banip", "igmpproxy": "igmpproxy"}
+    APK_CONFIGS = {"ddns-scripts": "ddns", "sqm-scripts": "sqm", "banip": "banip", "igmpproxy": "igmpproxy",
+                   "miniupnpd-nftables": "upnpd"}
     # 기본 설정에 넣지 않고 설치할 때만 생기는 설정 (igmpproxy 패키지에 들어 있는 /etc/config/igmpproxy)
     APK_ONLY_UCI = {"igmpproxy": [
         S("igmpproxy", "cfg01a1b2", quickleave="1"),
         S("phyint", "cfg02a1b2", network="wan", zone="wan", direction="upstream", altnet=["192.168.1.0/24"]),
         S("phyint", "cfg03a1b2", network="lan", zone="lan", direction="downstream"),
+    ], "upnpd": [
+        S("upnpd", "config", enabled="0", enable_natpmp="1", enable_upnp="1", secure_mode="1", log_output="0",
+          download="1024", upload="512", internal_iface="lan", port="5000", upnp_lease_file="/var/run/miniupnpd.leases",
+          igdv1="1"),
+        S("perm_rule", "cfga1b2c3", action="allow", ext_ports="1024-65535", int_addr="0.0.0.0/0",
+          int_ports="1024-65535", comment="Allow high ports"),
     ]}
     BANIP_COUNTRIES = "".join(f"{c}\t{r}\t{n}\n" for c, r, n in [
         ("cn", "APNIC", "China"), ("kr", "APNIC", "Korea (the Republic of)"), ("jp", "APNIC", "Japan"), ("ru", "RIPE", "Russian Federation"),
@@ -765,6 +813,9 @@ class FakeUbus:
                     continue
                 if n not in self.APK_REPO:
                     return {"code": 1, "stderr": f"ERROR: unable to select packages:\n  {n} (no such package):\n    required by: world[{n}]\n"}
+                other = [p for p in inst if p.startswith("wpad-") and p != n]
+                if n.startswith("wpad-") and other:  # 실제 apk: 둘 다 hostapd를 제공하므로 같이 설치할 수 없다
+                    return {"code": 1, "stderr": f"ERROR: unable to select packages:\n  {n}: conflicts: {other[0]}\n"}
                 ver, desc = self.APK_REPO[n]
                 inst[n] = (ver, desc or (inst.get(n) or ("", "", 0))[1], (inst.get(n) or ("", "", 65536))[2])
                 self._apk_add_config(n)
@@ -1086,7 +1137,7 @@ class FakeUbus:
 
     def _radio_of_ifname(self, ifname):
         """'phy1-ap0' -> radio1 설정 섹션 (wireless_status가 붙이는 이름 규칙과 같다)."""
-        m = re.match(r"^phy(\d+)-ap\d+$", str(ifname or ""))
+        m = re.match(r"^phy(\d+)-(?:ap|mesh)\d+$", str(ifname or ""))
         return find_section(self.running["wireless"], "radio" + m.group(1)) if m else None
 
     def iw_txpowerlist(self, sid, args):
@@ -1137,7 +1188,9 @@ class FakeUbus:
         enc = str(cfg.get("encryption") or "none").split("+")[0]
         wpa = {"psk2": ([2], ["psk"]), "sae-mixed": ([2, 3], ["psk", "sae"]), "sae": ([3], ["sae"])}.get(enc)
         ifname = args.get("device")
-        return {"phy": "phy" + radio[".name"][-1], "ssid": cfg.get("ssid"), "mode": "Master",
+        mesh = cfg.get("mode") == "mesh"
+        return {"phy": "phy" + radio[".name"][-1], "ssid": cfg.get("mesh_id") if mesh else cfg.get("ssid"),
+                "mode": "Mesh Point" if mesh else "Master",
                 "bssid": "94:83:C4:CA:E%d:F%d" % (int(radio[".name"][-1]), int(ifname[-1])),
                 "hwmodes": hwmodes, "htmodes": htmodes, "hardware": {"name": "MediaTek MT7986"},
                 "country": radio.get("country") or "00", "txpower": int(radio.get("txpower") or 23),
@@ -1217,15 +1270,18 @@ class FakeUbus:
         for radio in (s for s in sections if s[".type"] == "wifi-device"):
             disabled = radio.get("disabled") == "1"
             ifaces = []
-            for n, iface in enumerate(s for s in sections
-                                      if s[".type"] == "wifi-iface" and s.get("device") == radio[".name"]
-                                      and s.get("disabled") != "1"):
+            counts = {}  # 실제 OpenWrt처럼 종류별로 번호를 붙인다 (phy1-ap0, phy1-ap1, phy1-mesh0)
+            for iface in (s for s in sections
+                          if s[".type"] == "wifi-iface" and s.get("device") == radio[".name"]
+                          and s.get("disabled") != "1"):
                 cfg = options_of(iface)
                 cfg["network"] = as_list(cfg.get("network"))
                 cfg.setdefault("mode", "ap")
                 entry = {"section": iface[".name"], "config": cfg, "vlans": [], "stations": []}
+                kind = "mesh" if cfg["mode"] == "mesh" else "ap"
+                n = counts[kind] = counts.get(kind, -1) + 1
                 if not disabled:
-                    entry["ifname"] = "phy%s-ap%d" % (radio[".name"][-1], n)
+                    entry["ifname"] = "phy%s-%s%d" % (radio[".name"][-1], kind, n)
                 ifaces.append(entry)
             out[radio[".name"]] = {"up": not disabled, "pending": False, "autostart": True,
                                    "disabled": disabled, "retry_setup_failed": False,
@@ -1258,6 +1314,11 @@ class FakeUbus:
         bands = {r.get("band") for r in self.running["wireless"] if r[".type"] == "wifi-device"}
         band = radio.get("band")
         out = []
+        if "-mesh" in str(args.get("device")):  # 메시: 이웃 공유기 하나
+            return {"results": [{"mac": "94:83:C4:AA:BB:01", "signal": -58, "signal_avg": -58, "noise": -95, "inactive": 40,
+                                 "connected_time": 7260, "mesh plink": "ESTAB",
+                                 "rx": {"rate": 866700, "mhz": 80, "vht": True, "mcs": 9, "nss": 2},
+                                 "tx": {"rate": 780000, "mhz": 80, "vht": True, "mcs": 8, "nss": 2}}]}
         if not str(args.get("device")).endswith("-ap0"):  # 가짜 기기는 대역의 첫 번째 무선에만 붙어 있다
             return {"results": out}
         rate = {"rate": 1729600, "mhz": 160, "he": True, "mcs": 8, "nss": 2} if band != "2g" else \
@@ -1416,7 +1477,10 @@ class FakeUbus:
             if path not in self.files:
                 raise Status(UBUS_NOT_FOUND)
             return {"data": self.files[path].decode()}
-        if path == self.SSH_KEYS:  # 공개 키를 저장한 적이 없으면 파일이 없다
+        if path == "/var/run/miniupnpd.leases" and getattr(self, "upnp_running", False):
+            files[path] = lambda: ("UDP:3074:192.168.1.104:3074:0:Xbox (3074) UDP\n"
+                                   "TCP:51413:192.168.1.103:51413:0:Transmission at 51413\n")
+        if path in (self.SSH_KEYS, "/etc/crontabs/root"):  # 저장한 적이 없으면 파일이 없다
             if path not in self.files:
                 raise Status(UBUS_NOT_FOUND)
             return {"data": self.files[path].decode()}

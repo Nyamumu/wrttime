@@ -219,7 +219,8 @@ async function wirelessStatus() {
   const ifaces = sections.filter((s) => s['.type'] === 'wifi-iface');
   // 실행 중인 무선 장치 이름 (phy0-ap0 등)과 각 장치의 phy
   const devs = await ubus('iwinfo', 'devices').then((d) => d.devices || [], () => null);
-  const names = devs || radios.flatMap((_, i) => [0, 1, 2, 3].map((j) => `phy${i}-ap${j}`)); // 목록을 못 받으면 이름 규칙으로 추정
+  // 목록을 못 받으면 이름 규칙으로 추정 (AP는 phyN-apJ, 메시는 phyN-mesh0)
+  const names = devs || radios.flatMap((_, i) => [...[0, 1, 2, 3].map((j) => `phy${i}-ap${j}`), `phy${i}-mesh0`]);
   const infos = (await Promise.all(names.map((n) => ubus('iwinfo', 'info', { device: n })
     .then((info) => ({ ifname: n, info }), () => null)))).filter(Boolean);
   const out = {};
@@ -229,6 +230,7 @@ async function wirelessStatus() {
     const live = infos.filter((x) => x.info.phy === phy || x.ifname.startsWith(`${phy}-`));
     const aps = ifaces.filter((i) => i.device === r['.name'] && i.disabled !== '1');
     const used = new Set();
+    const seq = {}; // 종류별 순번 (phyN-ap0, phyN-ap1, phyN-mesh0처럼 종류마다 따로 센다)
     const cfgOf = (s) => {
       const c = Object.fromEntries(Object.entries(s).filter(([k]) => !k.startsWith('.')));
       c.network = asList(c.network);
@@ -240,10 +242,13 @@ async function wirelessStatus() {
       pending: false,
       disabled: r.disabled === '1',
       config: cfgOf(r),
-      interfaces: aps.map((s, j) => {
-        // 같은 SSID의 실행 중 장치를 먼저 찾고, 없으면 순서대로(phyN-apJ)
-        const hit = live.find((x) => !used.has(x.ifname) && x.info.ssid === s.ssid)
-          || live.find((x) => !used.has(x.ifname) && x.ifname === `${phy}-ap${j}`);
+      interfaces: aps.map((s) => {
+        // 같은 SSID(메시는 메시 ID)의 실행 중 장치를 먼저 찾고, 없으면 순서대로(phyN-apJ / phyN-meshJ)
+        const kind = s.mode === 'mesh' ? 'mesh' : 'ap';
+        const j = seq[kind] = (seq[kind] ?? -1) + 1;
+        const name = kind === 'mesh' ? s.mesh_id : s.ssid;
+        const hit = live.find((x) => !used.has(x.ifname) && name && x.info.ssid === name)
+          || live.find((x) => !used.has(x.ifname) && x.ifname === `${phy}-${kind}${j}`);
         if (hit) used.add(hit.ifname);
         return { section: s['.name'], ifname: hit ? hit.ifname : undefined, config: cfgOf(s) };
       }),
@@ -287,9 +292,11 @@ const MENU_ALL = [
     { path: '/wireless', label: '무선 설정' },
     { path: '/wireless-advanced', label: '무선 고급 설정' },
     { path: '/guest', label: '게스트 / VLAN 네트워크' },
+    { path: '/mesh', label: '무선 메시' },
   ] },
   { group: 'NAT/라우터 관리', icon: 'router', items: [
     { path: '/portforward', label: '포트포워드 설정' },
+    { path: '/upnp', label: 'UPnP 설정' },
     { path: '/firewall', label: '방화벽 설정' },
     { path: '/fw-rules', label: '트래픽 규칙' },
     { path: '/fw-nat', label: 'NAT 규칙' },
@@ -317,6 +324,7 @@ const MENU_ALL = [
     { path: '/firmware', label: '펌웨어 업그레이드' },
     { path: '/maintenance', label: '재시작 / 백업 / 초기화' },
     { path: '/log', label: '시스템 로그' },
+    { path: '/diagnostics', label: '네트워크 진단' },
     { path: '/sysinfo', label: '시스템 정보' },
     // LuCI가 있을 때만 보인다 (addons.js가 확인). 새 탭으로 연다.
     { path: '/luci', label: 'LuCI로 이동', href: '/cgi-bin/luci/', luci: true },

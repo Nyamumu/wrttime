@@ -1,4 +1,4 @@
-// 무선 설정 (대역별: 켜기/끄기, 이름, 숨기기, 보안, 암호, 채널, 모드, 대역폭)
+// 무선 설정 (대역별: 켜기/끄기, 이름, 숨기기, 보안, 암호, 빠른 로밍(802.11r), 채널, 모드, 대역폭)
 
 const WIFI_APPLY_TIMEOUT = 120; // 무선으로 접속 중이면 새 이름/암호로 다시 붙을 시간이 필요하다
 
@@ -147,6 +147,11 @@ function radioForm(radio, ifaces, st, showName, info) {
   const on = toggleEl(wasOn, '무선 사용');
   const ssid = h('input', { type: 'text', value: iface.ssid || '', spellcheck: 'false' });
   const hidden = toggleEl(iface.hidden === '1', '네트워크 이름 숨기기');
+  // 802.11r: 같은 이름/암호의 공유기(또는 메시 노드) 여러 대 사이를 옮길 때 다시 인증하지 않고 바로 넘어간다.
+  //   mobility_domain을 비워 두면 hostapd가 SSID로 정하므로 같은 SSID끼리는 자동으로 맞는다.
+  const ft = toggleEl(iface.ieee80211r === '1', '빠른 로밍 (802.11r)');
+  const ftHint = h('small', { class: 'hint check-hint' }, '같은 이름과 암호를 쓰는 공유기 여러 대 사이를 끊김 없이 옮겨 다닙니다. 오래된 기기가 접속하지 못하면 꺼 주세요.');
+  const ftBox = h('div', null, ft.el, ftHint);
   const enc = selectEl(WIFI_SECURITY, (iface.encryption || 'none').split('+')[0]);
   const key = h('input', { type: 'password', value: iface.key || '', autocomplete: 'new-password', spellcheck: 'false' });
   const showKey = toggleEl(false, '암호 보기');
@@ -181,11 +186,12 @@ function radioForm(radio, ifaces, st, showName, info) {
 
   const keyBox = h('div', null, fKey.el, showKey.el);
   const detail = h('div', null,
-    h('div', { class: 'fieldset' }, fSsid.el, fEnc.el), hidden.el, keyBox, h('div', { class: 'fieldset' }, fChan.el),
+    h('div', { class: 'fieldset' }, fSsid.el, fEnc.el), hidden.el, keyBox, ftBox, h('div', { class: 'fieldset' }, fChan.el),
     band === '60g' ? null : h('div', { class: 'fieldset' }, fMode.el, fWidth.el));
   const sync = () => {
     detail.hidden = !on.input.checked;
     keyBox.hidden = enc.value === 'none';
+    ftBox.hidden = enc.value === 'none';
   };
   on.input.addEventListener('change', sync);
   enc.addEventListener('change', sync);
@@ -221,6 +227,12 @@ function radioForm(radio, ifaces, st, showName, info) {
       if (enc.value !== (iface.encryption || 'none').split('+')[0]) ifVals.encryption = enc.value;
       const wantKey = enc.value === 'none' ? '' : key.value;
       if (wantKey !== (iface.key || '')) ifVals.key = wantKey;
+      const wantFt = enc.value !== 'none' && ft.input.checked;
+      if (wantFt !== (iface.ieee80211r === '1')) {
+        Object.assign(ifVals, wantFt
+          ? { ieee80211r: '1', ft_over_ds: '0', ft_psk_generate_local: '1' }
+          : { ieee80211r: '', ft_over_ds: '', ft_psk_generate_local: '' });
+      }
       const wantHidden = hidden.input.checked ? '1' : '';
       if (wantHidden !== (iface.hidden || '')) ifVals.hidden = wantHidden;
       if (chan.value !== (radio.channel || 'auto')) devVals.channel = chan.value;

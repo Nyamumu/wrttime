@@ -225,6 +225,11 @@ svg.ic { width: 22px; height: 22px; flex: none; fill: none; stroke: currentColor
 td.pkg-desc { font-size: 13px; color: var(--muted); max-width: 420px; }
 .apk-log { max-height: 320px; overflow: auto; white-space: pre-wrap; word-break: break-all; font-size: 12px; background: var(--bg); padding: 10px; border-radius: 3px; }
 .apk-log.apk-fail { color: var(--bad); }
+.diag-out { max-height: 60vh; margin: 12px 0 0; font-family: ui-monospace, Consolas, monospace; }
+.diag-out[hidden] { display: none; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 8px; }
+.chip { border: 1px solid var(--line); background: var(--panel); color: inherit; border-radius: 999px; padding: 3px 10px; font: inherit; font-size: 12px; cursor: pointer; }
+.chip:hover { border-color: var(--accent-strong); }
 /* 국가 차단 */
 .geo-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; min-height: 26px; align-items: center; }
 .geo-chip { border: 0; cursor: pointer; color: inherit; }
@@ -289,6 +294,10 @@ td.actions-cell .btn + .btn { margin-left: 4px; }
 .check input { accent-color: var(--accent-strong); width: 16px; height: 16px; }
 .check[hidden] { display: none; }
 .sub-check { margin-left: 24px; }
+.day-checks { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.day-checks .check { margin: 4px 0; }
+.steps { margin: 0 0 8px; padding-left: 20px; line-height: 1.8; }
+.check-hint { display: block; margin: -8px 0 12px 24px; }
 .sub-check[hidden] { display: none; }
 .days { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
 .days label { display: flex; align-items: center; gap: 4px; padding: 3px 8px; border: 1px solid var(--input-line); border-radius: 999px; font-size: 13px; cursor: pointer; }

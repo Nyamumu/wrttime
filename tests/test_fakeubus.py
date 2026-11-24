@@ -177,6 +177,49 @@ class SessionAndAcl(Base):
         self.assertIn("S99igmpproxy", rc())
         self.assertEqual(init("reload"), [6])  # 정해진 동작 말고는 거부
 
+    def test_diagnostics_acl(self):
+        """네트워크 진단: 화면이 쓰는 옵션 모양만 실행되고, 없는 위치는 [4]로 알려 준다."""
+        sid = self.login()
+        ex = lambda cmd, *p: self.call(sid, "file", "exec", {"command": cmd, "params": list(p)})
+        r = ex("/bin/ping", "-c", "4", "-W", "2", "-4", "8.8.8.8")
+        self.assertEqual(r[1]["code"], 0)
+        self.assertIn("4 packets received", r[1]["stdout"])
+        self.assertEqual(ex("/usr/bin/ping", "-c", "4", "-W", "2", "-4", "8.8.8.8"), [4])  # 이 공유기에는 없는 위치
+        self.assertEqual(ex("/usr/bin/traceroute", "-n", "-q", "1", "-w", "2", "-m", "20", "-6", "google.com")[1]["code"], 0)
+        self.assertEqual(ex("/usr/bin/nslookup", "naver.com")[1]["code"], 0)
+        self.assertEqual(ex("/bin/ping", "-f", "8.8.8.8"), [6])  # 다른 옵션은 거부
+        self.assertEqual(ex("/bin/ping", "8.8.8.8"), [6])
+
+    def test_upnp_and_cron_acl(self):
+        """UPnP 설치/설정/서비스 제어와 예약 재시작(crontab) 저장이 배포용 ACL로 된다."""
+        sid = self.login()
+        ex = lambda cmd, *p: self.call(sid, "file", "exec", {"command": cmd, "params": list(p)})
+        self.assertEqual(ex("/usr/bin/apk", "add", "miniupnpd-nftables")[1]["code"], 0)
+        self.assertEqual(self.call(sid, "uci", "set", {"config": "upnpd", "section": "config", "values": {"enabled": "1"}}), [0])
+        self.assertEqual(self.call(sid, "uci", "apply", {"rollback": True, "timeout": 60}), [0])
+        self.clock.now += 3
+        self.assertEqual(self.call(sid, "uci", "confirm"), [0])
+        for a in ("enable", "restart"):
+            self.assertEqual(ex("/etc/init.d/miniupnpd", a)[1]["code"], 0)
+        leases = self.call(sid, "file", "read", {"path": "/var/run/miniupnpd.leases"})[1]["data"]
+        self.assertIn("TCP:51413:", leases)
+        self.assertEqual(self.call(sid, "file", "read", {"path": "/etc/crontabs/root"}), [4])
+        line = "0 4 * * 1,4 sleep 70 && touch /etc/banner && reboot # wrttime-reboot\n"
+        self.assertEqual(self.call(sid, "file", "write", {"path": "/etc/crontabs/root", "data": line}), [0])
+        self.assertEqual(self.call(sid, "file", "read", {"path": "/etc/crontabs/root"})[1]["data"], line)
+        for a in ("enable", "restart"):
+            self.assertEqual(ex("/etc/init.d/cron", a)[1]["code"], 0)
+        self.assertEqual(self.call(sid, "file", "write", {"path": "/etc/crontabs/other", "data": "x"}), [6])
+
+    def test_mesh_package_swap(self):
+        """메시: wpad-basic이 있으면 wpad-mesh를 바로 설치할 수 없고, 지운 뒤에는 설치된다."""
+        sid = self.login()
+        apk = lambda *p: self.call(sid, "file", "exec", {"command": "/usr/bin/apk", "params": list(p)})[1]
+        self.assertIn("conflicts", apk("add", "wpad-mesh-mbedtls")["stderr"])
+        self.assertEqual(apk("del", "wpad-basic-mbedtls")["code"], 0)
+        self.assertEqual(apk("add", "wpad-mesh-mbedtls")["code"], 0)
+        self.assertIn("P:wpad-mesh-mbedtls", self.call(sid, "file", "read", {"path": "/lib/apk/db/installed"})[1]["data"])
+
     def test_led_and_packagelist_acl(self):
         """LED 설정과 업그레이드 확인이 쓰는 호출이 배포용 ACL로 되는지 (LED 트리거는 링크를 푼 실제 경로도 검사)."""
         sid = self.login()

@@ -137,7 +137,7 @@ function wifiOverviewPage(root) {
     return h('div', { class: 'wo-row' + (off ? ' wo-off' : '') },
       h('div', { class: 'wo-badge' }, wifiBars(info && info.signal), h('span', { class: 'muted' }, wifiDbm(info && info.signal, info && info.noise))),
       h('div', { class: 'wo-main' },
-        h('div', null, h('b', null, w.ssid || '(이름 없음)'), ` · ${WIFI_MODE_TEXT[info && info.mode] || WIFI_MODE_TEXT[w.mode] || w.mode || 'AP'}`,
+        h('div', null, h('b', null, w.ssid || w.mesh_id || '(이름 없음)'), ` · ${WIFI_MODE_TEXT[info && info.mode] || WIFI_MODE_TEXT[w.mode] || w.mode || 'AP'}`,
           nets.length ? ` · ${nets.map((n) => IFACE_LABEL[n] || n).join(', ')}` : ''),
         h('div', { class: 'muted' }, [info && info.bssid ? `BSSID ${info.bssid}` : null, wifiEncText(info && info.encryption, w), ifname ? `연결 ${clients}대` : null].filter(Boolean).join(' · '))),
       h('span', { class: 'pill ' + (off ? 'off' : ifname ? 'ok' : 'warn') }, off ? '꺼짐' : ifname ? '사용 중' : '시작 중'),
