@@ -296,6 +296,34 @@ td.actions-cell .btn + .btn { margin-left: 4px; }
 .sub-check { margin-left: 24px; }
 .day-checks { display: flex; flex-wrap: wrap; gap: 4px 14px; }
 .day-checks .check { margin: 4px 0; }
+/* 무선 메시 구성도: 이 공유기(맨 위) 아래로 메시 공유기를 점선 나무 모양으로 */
+.mesh-tree { margin: 4px 0 10px; }
+.mesh-root { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: var(--radius); background: var(--accent); color: var(--accent-ink); flex-wrap: wrap; }
+.mesh-root .mesh-ico { background: #ffffff; color: #4d2523; } /* 강조색 바탕 위라 테마와 상관없이 흰 상자 */
+.mesh-act a.btn { text-decoration: none; }
+.mesh-root .mesh-sum { margin-left: auto; font-size: 13px; }
+.mesh-ico { flex: none; width: 40px; height: 40px; border-radius: 8px; display: grid; place-items: center; background: var(--tile-1); color: var(--accent-ink); }
+.mesh-ico svg { width: 22px; height: 22px; }
+.mesh-main { min-width: 0; }
+.mesh-name { overflow-wrap: anywhere; }
+.mesh-children { margin-left: 20px; }
+.mesh-item { position: relative; padding-left: 26px; }
+.mesh-item::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; border-left: 2px dashed var(--accent-strong); opacity: .55; }
+.mesh-item:last-child::before { bottom: auto; height: 32px; }
+.mesh-item::after { content: ''; position: absolute; left: 0; top: 32px; width: 20px; border-top: 2px dashed var(--accent-strong); opacity: .55; }
+.mesh-row { display: grid; grid-template-columns: auto minmax(0, 1.4fr) minmax(0, 1.2fr) auto; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.mesh-row.gone { opacity: .55; }
+.mesh-row.gone .mesh-ico { filter: grayscale(1); }
+.mesh-link { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.mesh-link .muted { flex-basis: 100%; }
+.mesh-q { font-weight: 600; font-size: 13px; }
+.mesh-q.ok { color: var(--ok); } .mesh-q.warn { color: var(--warn); } .mesh-q.bad { color: var(--bad); } .mesh-q.off { color: var(--muted); }
+.mesh-act { display: flex; align-items: center; gap: 6px; justify-content: flex-end; flex-wrap: wrap; }
+.mesh-empty { margin: 12px 0 0 20px; }
+@media (max-width: 720px) {
+  .mesh-row { grid-template-columns: auto minmax(0, 1fr); }
+  .mesh-link, .mesh-act { grid-column: 2; justify-content: flex-start; }
+}
 .steps { margin: 0 0 8px; padding-left: 20px; line-height: 1.8; }
 .check-hint { display: block; margin: -8px 0 12px 24px; }
 .sub-check[hidden] { display: none; }

@@ -25,6 +25,7 @@ function meshPage(root) {
   const body = h('div', null, h('span', { class: 'muted' }, '불러오는 중...'));
   root.append(pageTitle('무선 메시'), body);
   let alive = true;
+  let map = null; // 메시 구성 카드 (15초마다 새로 그린다)
 
   async function load() {
     let sections, status, installed;
@@ -43,17 +44,28 @@ function meshPage(root) {
     const radios = (sections || []).filter((s) => s['.type'] === 'wifi-device' && MESH_CHANNELS[radioBand(s)]);
     if (!radios.length) { body.replaceChildren(messageCard('메시에 쓸 수 있는 2.4GHz / 5GHz 무선 장치가 없습니다.')); return; }
     const mesh = (sections || []).find((s) => s['.type'] === 'wifi-iface' && s.mode === 'mesh') || null;
-    let peers = [];
-    const ifname = mesh && Object.values(status || {}).flatMap((r) => r.interfaces || [])
-      .filter((i) => i.section === mesh['.name']).map((i) => i.ifname).find(Boolean);
-    if (ifname) peers = await ubus('iwinfo', 'assoclist', { device: ifname }).then((d) => d.results || [], () => []);
+    const allIfs = Object.values(status || {}).flatMap((r) => r.interfaces || []);
+    const ifname = mesh && allIfs.filter((i) => i.section === mesh['.name']).map((i) => i.ifname).find(Boolean);
+    // 구성도 맨 위의 '이 공유기': 이름, 모델, 무선 기기 수
+    let self = null;
+    if (mesh) {
+      const apIfs = allIfs.filter((i) => i.ifname && (i.config || {}).mode !== 'mesh').map((i) => i.ifname);
+      const [board, counts] = await Promise.all([
+        ubus('system', 'board').catch(() => ({})),
+        Promise.all(apIfs.map((d) => ubus('iwinfo', 'assoclist', { device: d }).then((x) => (x.results || []).length, () => 0))),
+      ]);
+      self = { name: board.hostname || 'OpenWrt', model: board.model || '', meshId: mesh.mesh_id || '',
+        clients: apIfs.length ? counts.reduce((a, b) => a + b, 0) : null };
+    }
     if (!alive) return;
+    if (map) map.stop();
+    map = mesh ? meshMapCard(ifname, self, () => alive) : null;
     const cap = installed ? meshCapable(installed) : { ok: true, basic: [] }; // 목록을 못 읽으면 막지 않는다
     // replaceChildren는 null을 'null' 글자로 넣으므로 걸러 낸다
     body.replaceChildren(...[
       cap.ok ? null : packageCard(cap.basic),
       meshForm(radios, mesh, cap.ok),
-      mesh ? peersCard(mesh, ifname, peers) : null,
+      map ? map.el : null,
       nodeGuide(),
     ].filter(Boolean));
   }
@@ -162,24 +174,6 @@ function meshPage(root) {
       h('div', { class: 'actions' }, applyBtn));
   }
 
-  function peersCard(mesh, ifname, peers) {
-    const fmtTime = (s) => (s >= 3600 ? `${Math.floor(s / 3600)}시간 ${Math.floor((s % 3600) / 60)}분` : `${Math.floor(s / 60)}분`);
-    const rows = peers.map((p) => h('tr', null,
-      h('td', null, p.mac),
-      h('td', null, p.signal != null ? `${p.signal} dBm` : '-'),
-      h('td', null, p.rx && p.rx.rate ? `${Math.round(p.rx.rate / 1000)} Mbps` : '-'),
-      h('td', null, p.connected_time != null ? fmtTime(p.connected_time) : '-')));
-    return card('연결된 메시 공유기',
-      !ifname
-        ? h('p', { class: 'muted' }, mesh.disabled === '1' ? '메시가 꺼져 있습니다.' : '메시가 아직 켜지지 않았습니다. 패키지와 채널을 확인해 주세요.')
-        : rows.length
-          ? h('div', { class: 'table-wrap' }, h('table', null,
-            h('thead', null, h('tr', null, ...['MAC 주소', '신호', '속도', '연결 시간'].map((x) => h('th', null, x)))),
-            h('tbody', null, rows)))
-          : h('p', { class: 'muted' }, '연결된 메시 공유기가 없습니다. 다른 공유기의 대역, 채널, 메시 ID, 암호가 같은지 확인해 주세요.'),
-      h('p', { class: 'muted' }, '신호가 -70 dBm보다 약하면 공유기를 더 가깝게 두세요.'));
-  }
-
   function nodeGuide() {
     return card('다른 공유기를 메시에 추가하려면',
       h('ol', { class: 'steps' },
@@ -191,7 +185,7 @@ function meshPage(root) {
   }
 
   load();
-  return () => { alive = false; };
+  return () => { alive = false; if (map) map.stop(); };
 }
 
 PAGES['/mesh'] = meshPage;

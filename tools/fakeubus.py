@@ -666,6 +666,11 @@ class FakeUbus:
             return {"code": 0, "stdout": ""}
         if cmd in self.DIAG_MISSING:
             raise Status(UBUS_NOT_FOUND)  # 실제 rpcd: 없는 명령이면 [4]
+        if cmd == "/usr/sbin/iw":
+            return self._iw(params)
+        if cmd == "/bin/ping" and params[:4] == ["-c", "1", "-W", "1"]:  # 메시 공유기 응답 확인
+            ok = params[-1].rsplit(".", 1)[-1] in [n[5] for n in self.MESH_NODES if n[5]] and self._mesh_on()
+            return {"code": 0 if ok else 1, "stdout": "1 packets transmitted, %d packets received\n" % (1 if ok else 0)}
         if cmd in ("/bin/ping", "/usr/bin/traceroute", "/usr/bin/nslookup"):
             return self._diag(cmd.rsplit("/", 1)[1], params)
         if cmd == "/usr/libexec/nmmwrt-update":
@@ -682,6 +687,47 @@ class FakeUbus:
             self.log("[fakeubus] LED 서비스를 다시 시작했습니다")
             return {"code": 0, "stdout": ""}
         return {"code": 127, "stderr": "not found\n"}
+
+    # ----- 메시 흉내 -----
+    # 메시 MAC, 경유(None = 직접), 신호, 속도, br-lan MAC, IP(None = ARP에 없음), DHCP 이름(None = 고정 IP)
+    MESH_NODES = [
+        ("94:83:c4:aa:bb:01", None, -58, 866700, "94:83:c4:aa:cc:01", "2", None),
+        ("94:83:c4:aa:bb:02", "94:83:c4:aa:bb:01", None, None, "94:83:c4:aa:cc:02", "150", "upstairs-ap"),
+        ("94:83:c4:aa:bb:03", None, -77, 288200, "94:83:c4:aa:cc:03", None, None),
+    ]
+
+    def _mesh_on(self):
+        return any(s[".type"] == "wifi-iface" and s.get("mode") == "mesh" and s.get("disabled") != "1"
+                   for s in self.running["wireless"])
+
+    def _lan_base(self):
+        lan = find_section(self.running["network"], "lan") or {}
+        return (as_list(lan.get("ipaddr")) or ["192.168.1.1"])[0].split("/")[0].rsplit(".", 1)[0]
+
+    def _iw(self, params):
+        if len(params) != 4 or params[0] != "dev" or params[3] != "dump" or params[2] not in ("mpath", "mpp"):
+            return {"code": 1, "stderr": "command failed: Invalid argument (-22)\n"}
+        dev = params[1]
+        if not self._mesh_on() or "-mesh" not in dev:
+            return {"code": 1, "stderr": "command failed: No such device (-19)\n"}
+        if params[2] == "mpath":
+            rows = ["DEST ADDR         NEXT HOP          IFACE\tSN\tMETRIC\tQLEN\tEXPTIME\tDTIM\tDRET\tFLAGS\tHOP_COUNT\tPATH_CHANGE"]
+            for mac, via, *_ in self.MESH_NODES:
+                hops = 1 if via is None else 2
+                rows.append(f"{mac} {via or mac} {dev}\t12\t{170 * hops}\t0\t2310\t100\t0\t0x15\t{hops}\t1")
+        else:
+            rows = ["DEST ADDR         PROXY NODE        IFACE"]
+            rows += [f"{lan} {mac} {dev}" for mac, _, _, _, lan, *_ in self.MESH_NODES]
+        return {"code": 0, "stdout": "\n".join(rows) + "\n"}
+
+    def _arp(self):
+        base = self._lan_base()
+        rows = ["IP address       HW type     Flags       HW address            Mask     Device"]
+        rows += [f"{base}.{n}  0x1  0x2  {mac}  *  br-lan" for mac, n in
+                 (("a4:83:e7:12:34:56", 101), ("3c:22:fb:aa:bb:cc", 102), ("b8:27:eb:11:22:33", 104))]
+        if self._mesh_on():
+            rows += [f"{base}.{ip}  0x1  0x2  {lan}  *  br-lan" for _, _, _, _, lan, ip, _ in self.MESH_NODES if ip]
+        return "\n".join(rows) + "\n"
 
     # ----- 네트워크 진단 흉내 -----
     DIAG_MISSING = ("/usr/bin/ping", "/bin/traceroute", "/bin/nslookup")  # 다른 위치는 없는 공유기 (첫 위치를 찾는 흐름 확인)
@@ -1298,6 +1344,8 @@ class FakeUbus:
                 ("3c:22:fb:aa:bb:cc", 102, "macbook-pro", "*"),
                 ("f0:18:98:de:f0:12", 103, "*", "*"),
                 ("b8:27:eb:11:22:33", 104, "living-tv", "*")]
+        if self._mesh_on():
+            rows += [(lan, int(ip), name, "*") for _, _, _, _, lan, ip, name in self.MESH_NODES if name]
         return "".join(f"{expiry} {mac} {base}.{n} {name} {cid}\n" for mac, n, name, cid in rows)
 
     # 가짜 기기들이 어디에 붙어 있는지: 무선(대역) 또는 유선(브리지 구성원 순번, -1 = 마지막)
@@ -1314,11 +1362,12 @@ class FakeUbus:
         bands = {r.get("band") for r in self.running["wireless"] if r[".type"] == "wifi-device"}
         band = radio.get("band")
         out = []
-        if "-mesh" in str(args.get("device")):  # 메시: 이웃 공유기 하나
-            return {"results": [{"mac": "94:83:C4:AA:BB:01", "signal": -58, "signal_avg": -58, "noise": -95, "inactive": 40,
+        if "-mesh" in str(args.get("device")):  # 메시: 직접 연결된 이웃 공유기 (MESH_NODES)
+            return {"results": [{"mac": mac.upper(), "signal": sig, "signal_avg": sig, "noise": -95, "inactive": 40,
                                  "connected_time": 7260, "mesh plink": "ESTAB",
-                                 "rx": {"rate": 866700, "mhz": 80, "vht": True, "mcs": 9, "nss": 2},
-                                 "tx": {"rate": 780000, "mhz": 80, "vht": True, "mcs": 8, "nss": 2}}]}
+                                 "rx": {"rate": rate, "mhz": 80, "vht": True, "mcs": 9, "nss": 2},
+                                 "tx": {"rate": rate * 9 // 10, "mhz": 80, "vht": True, "mcs": 8, "nss": 2}}
+                                for mac, via, sig, rate, *_ in self.MESH_NODES if via is None]}
         if not str(args.get("device")).endswith("-ap0"):  # 가짜 기기는 대역의 첫 번째 무선에만 붙어 있다
             return {"results": out}
         rate = {"rate": 1729600, "mhz": 160, "he": True, "mcs": 8, "nss": 2} if band != "2g" else \
@@ -1480,7 +1529,8 @@ class FakeUbus:
         if path == "/var/run/miniupnpd.leases" and getattr(self, "upnp_running", False):
             files[path] = lambda: ("UDP:3074:192.168.1.104:3074:0:Xbox (3074) UDP\n"
                                    "TCP:51413:192.168.1.103:51413:0:Transmission at 51413\n")
-        if path in (self.SSH_KEYS, "/etc/crontabs/root"):  # 저장한 적이 없으면 파일이 없다
+        files["/proc/net/arp"] = self._arp
+        if path in (self.SSH_KEYS, "/etc/crontabs/root", "/etc/wrttime-mesh.json"):  # 저장한 적이 없으면 파일이 없다
             if path not in self.files:
                 raise Status(UBUS_NOT_FOUND)
             return {"data": self.files[path].decode()}

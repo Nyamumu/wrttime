@@ -3,3 +3,4 @@
 /usr/share/rpcd/acl.d/easyui.json
 /usr/libexec/nmmwrt-update
 /lib/upgrade/keep.d/nmmwrt
+/etc/wrttime-mesh.json

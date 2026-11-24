@@ -220,6 +220,25 @@ class SessionAndAcl(Base):
         self.assertEqual(apk("add", "wpad-mesh-mbedtls")["code"], 0)
         self.assertIn("P:wpad-mesh-mbedtls", self.call(sid, "file", "read", {"path": "/lib/apk/db/installed"})[1]["data"])
 
+    def test_mesh_map_acl(self):
+        """메시 구성도: 경로/대리 표, ARP 표, 응답 확인, 이름 파일이 배포용 ACL로 된다."""
+        sid = self.login()
+        ex = lambda cmd, *p: self.call(sid, "file", "exec", {"command": cmd, "params": list(p)})
+        self.assertEqual(self.call(sid, "uci", "add", {"config": "wireless", "type": "wifi-iface", "name": "wrttime_mesh",
+                                                       "values": {"device": "radio1", "mode": "mesh", "mesh_id": "m",
+                                                                  "encryption": "sae", "key": "meshpass123", "network": "lan"}})[0], 0)
+        self.assertEqual(self.call(sid, "uci", "apply", {"rollback": True, "timeout": 60}), [0])
+        self.clock.now += 3
+        self.assertEqual(self.call(sid, "uci", "confirm"), [0])
+        mpath = ex("/usr/sbin/iw", "dev", "phy1-mesh0", "mpath", "dump")[1]
+        self.assertTrue(mpath["stdout"].startswith("DEST ADDR"))
+        self.assertIn("PROXY NODE", ex("/usr/sbin/iw", "dev", "phy1-mesh0", "mpp", "dump")[1]["stdout"])
+        self.assertEqual(ex("/usr/sbin/iw", "dev", "phy1-mesh0", "set", "type", "managed"), [6])  # 다른 iw 명령은 거부
+        self.assertIn("br-lan", self.call(sid, "file", "read", {"path": "/proc/net/arp"})[1]["data"])
+        self.assertEqual(ex("/bin/ping", "-c", "1", "-W", "1", "-4", "192.168.1.2")[1]["code"], 0)
+        self.assertEqual(self.call(sid, "file", "read", {"path": "/etc/wrttime-mesh.json"}), [4])
+        self.assertEqual(self.call(sid, "file", "write", {"path": "/etc/wrttime-mesh.json", "data": "{}"}), [0])
+
     def test_led_and_packagelist_acl(self):
         """LED 설정과 업그레이드 확인이 쓰는 호출이 배포용 ACL로 되는지 (LED 트리거는 링크를 푼 실제 경로도 검사)."""
         sid = self.login()
